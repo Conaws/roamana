@@ -24,10 +24,9 @@
              :todo/due     {:db/index true}})
 
 
-(defonce conn (doto
-                  (d/create-conn schema)
-                posh!))
-
+(def conn (r/atom (doto
+                      (d/create-conn schema)
+                    posh!)))
 
 
 (defn index [xs]
@@ -92,17 +91,31 @@
 
 
 
-(all-ents @conn)
 
 (def logatom (local-storage (atom {}) :logatom))
 
 
-(swap! logatom assoc :hey :ho)
+
+(defn transact-log [logatom conn ents]
+  (let [txs (d/transact! @conn ents)
+        datoms (:tx-data txs)
+        txid   (nth (first datoms) 3)]
+    (swap! logatom assoc txid {:datoms datoms})))
 
 
-(.getItem js/localStorage :logatom)
 
 
+(def t!
+  (partial transact-log logatom))
+
+
+(def d2 (d/conn-from-datoms (select [MAP-VALS :datoms ALL] @logatom) schema))
+
+
+(reset! conn (doto d2 posh!))
+
+
+@@conn
 
 
 
@@ -114,26 +127,10 @@
 
 
 
+(->> (d/transact! @conn [{:todo/text "just a tkljklask" :todo/done false}])
+    )  
+@@conn
 
-(defn transact-log [logatom txs]
-  (let [datoms (:tx-data txs)
-        txid   (nth (first datoms) 3)]
-    (swap! logatom assoc txid {:datoms datoms})))
-
-
-
-(->> (d/transact! conn [{:todo/text "just a task" :todo/done false}])
-     (transact-log logatom))
-                  
-
-
-(defn tlog! [logatom conn ents]
- (->> (d/transact! conn ents)
-      (transact-log logatom)))
-
-
-(def t!
-  (partial tlog! logatom))
 
 
 (t! conn fixtures)
@@ -145,7 +142,6 @@
                (first (select [MAP-VALS :datoms] @logatom)))))
 
 
-(def d3 (d/conn-from-datoms (first (select [MAP-VALS :datoms] @logatom))))
 
 
-(all-ents @d3)
+(all-ents @d2)
