@@ -6,7 +6,7 @@
             [cljs.pprint     :refer [pprint]]
             [alandipert.storage-atom :refer [local-storage]]
             [cljs.reader]
-            [com.rpl.specter  :refer [ALL STAY LAST 
+            [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       stay-then-continue 
                                       collect-one comp-paths] :as sp]
             [clojure.string  :as str])
@@ -19,7 +19,7 @@
 (enable-console-print!)
 
 (def schema {:todo/tags    {:db/cardinality :db.cardinality/many}
-             :todo/project {:db/valueType :db.type/ref}
+             :todo/project {:db/valuetype :db.type/ref}
              :todo/done    {:db/index true}
              :todo/due     {:db/index true}})
 
@@ -37,10 +37,10 @@
   (-> (d/datoms db :avet a v) first :e))
 
 
-(defn all-ents [conn]
-  (-> (d/pull-many @conn '[*]
+(defn all-ents [db]
+  (-> (d/pull-many db '[*]
         (select [ALL ALL]
-                (d/q '[:find ?e :in $ :where [?e]] @conn)))
+                (d/q '[:find ?e :in $ :where [?e]] db)))
       pprint))
 
 
@@ -54,45 +54,98 @@
   {:db/id -3
    :project/name "shopping"}
                
-  {:todo/text "Displaying list of todos"
+  {:todo/text "displaying list of todos"
    :todo/tags ["listen" "query"]
    :todo/project -2
    :todo/done true
    :todo/due  #inst "2014-12-13"}
-  {:todo/text "Persisting to localStorage"
+  {:todo/text "persisting to localstorage"
    :todo/tags ["listen" "serialization" "transact"]
    :todo/project -2
    :todo/done true
    :todo/due  #inst "2014-12-13"}
-  {:todo/text "Make task completable"
+  {:todo/text "make task completable"
    :todo/tags ["transact" "funs"]
    :todo/project -2
    :todo/done false
    :todo/due  #inst "2014-12-13"}
-  {:todo/text "Fix fn calls on emtpy rels"
+  {:todo/text "fix fn calls on emtpy rels"
    :todo/tags ["bug" "funs" "query"]
    :todo/project -1
    :todo/done false
    :todo/due  #inst "2015-01-01"}
-  {:todo/text "Add db filtering"
+  {:todo/text "add db filtering"
    :todo/project -1
    :todo/done false
    :todo/due  #inst "2015-05-30"}
-  {:todo/text "Soap"
+  {:todo/text "soap"
    :todo/project -3
    :todo/done false
    :todo/due  #inst "2015-05-01"}
-  {:todo/text "Cake"
+  {:todo/text "cake"
    :todo/done false
    :todo/project -3}
-  {:todo/text "Just a task" :todo/done false}
-  {:todo/text "Another incomplete task" :todo/done false}])
+  {:todo/text "just a task" :todo/done false}
+  {:todo/text "another incomplete task" :todo/done false}])
 
 
 
-(d/transact! conn fixtures)
 
 
-(all-ents conn)
+(all-ents @conn)
+
+(def logatom (local-storage (atom {}) :logatom))
 
 
+(swap! logatom assoc :hey :ho)
+
+
+(.getItem js/localStorage :logatom)
+
+
+
+
+
+(add-watch logatom
+           :logatom
+           (fn [_ _ _ v]
+             (.log js/console "Logging" v)))
+
+
+
+
+
+(defn transact-log [logatom txs]
+  (let [datoms (:tx-data txs)
+        txid   (nth (first datoms) 3)]
+    (swap! logatom assoc txid {:datoms datoms})))
+
+
+
+(->> (d/transact! conn [{:todo/text "just a task" :todo/done false}])
+     (transact-log logatom))
+                  
+
+
+(defn tlog! [logatom conn ents]
+ (->> (d/transact! conn ents)
+      (transact-log logatom)))
+
+
+(def t!
+  (partial tlog! logatom))
+
+
+(t! conn fixtures)
+
+
+
+(def d2 (d/with (d/empty-db) 
+         (mapv #(concat [(if (nth % 4) :db/add :db/retract)] %)
+               (first (select [MAP-VALS :datoms] @logatom)))))
+
+
+(def d3 (d/conn-from-datoms (first (select [MAP-VALS :datoms] @logatom))))
+
+
+(all-ents @d3)
