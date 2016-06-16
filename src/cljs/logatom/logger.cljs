@@ -2,6 +2,8 @@
   (:require [reagent.core    :as r]
             [cljs.spec        :as s]
             [datascript.core :as d]
+            [re-frame.core   :refer [register-sub 
+                                     subscribe dispatch register-handler]]
             [posh.core       :as posh  :refer [pull posh! q transact!]]
             [cljs.pprint     :refer [pprint]]
             [alandipert.storage-atom :refer [local-storage]]
@@ -29,11 +31,51 @@
                     posh!)))
 
 
+#_(def logatom (local-storage (atom {}) :logatom))
+
+
+(defn transact-log [db logpath conn ents]
+  (let [txs (d/transact! @conn ents)
+        datoms (:tx-data txs)
+        txid   (nth (first datoms) 3)]
+    (assoc-in db [logpath txid] {:datoms datoms :visible true})))
+
+
+
+(register-handler
+ :tlog!
+ (fn [db [_ conn ents]]
+   (transact-log db :log conn ents)))
+
+
+
+
+(defn conn-from-log [logatom]
+  (d/conn-from-datoms (select [MAP-VALS #(:visible %) :datoms ALL] logatom) schema))
+
+
+
+(register-handler
+ :reset-conn
+ (fn [db [_ conn]]
+ (reset! conn (doto (conn-from-log (:log db)) posh!))))
+
+
+
+
+
+
+
+
 (defn index [xs]
   (map vector xs (range)))
 
 (defn e-by-av [db a v]
   (-> (d/datoms db :avet a v) first :e))
+
+
+
+
 
 
 (defn all-ents [db]
@@ -92,30 +134,10 @@
 
 
 
-(def logatom (local-storage (atom {}) :logatom))
-
-
-
-(defn transact-log [logatom conn ents]
-  (let [txs (d/transact! @conn ents)
-        datoms (:tx-data txs)
-        txid   (nth (first datoms) 3)]
-    (swap! logatom assoc txid {:datoms datoms})))
 
 
 
 
-(def t!
-  (partial transact-log logatom))
-
-
-(def d2 (d/conn-from-datoms (select [MAP-VALS :datoms ALL] @logatom) schema))
-
-
-(reset! conn (doto d2 posh!))
-
-
-@@conn
 
 
 
@@ -127,13 +149,7 @@
 
 
 
-(->> (d/transact! @conn [{:todo/text "just a tkljklask" :todo/done false}])
-    )  
-@@conn
 
-
-
-(t! conn fixtures)
 
 
 
@@ -144,4 +160,3 @@
 
 
 
-(all-ents @d2)

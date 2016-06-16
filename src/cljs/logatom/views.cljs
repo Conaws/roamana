@@ -2,6 +2,8 @@
   (:require [reagent.core    :as r]
             [logatom.logger  :as log :refer [conn logatom]]
             [cljs.spec        :as s]
+            [re-frame.core   :refer [register-sub 
+                                     subscribe dispatch register-handler]]
             [datascript.core :as d]
             [posh.core       :as posh  :refer [pull posh! q transact!]]
             [cljs.pprint     :refer [pprint]]
@@ -14,6 +16,9 @@
   (:require-macros
            [com.rpl.specter.macros  :refer [select transform declarepath providepath]]
            [reagent.ratom :refer [reaction]]))
+
+
+
 
 
 
