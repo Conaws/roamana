@@ -35,7 +35,7 @@
 
 
 (defn todo-create [conn]
-  (let [r (r/atom {:todo/text "" :todo/done false})]
+  (let [r (r/atom {:todo/text ""})]
     (fn []
       [:div
        [input-field "todo" :todo/text r]
@@ -59,8 +59,10 @@
            (for [[i [tx val]] (map-indexed vector @logmap)]
              [:div
               [:button
-               {:on-click #(dispatch [:toggle-log-visible tx])} i]
-              (pr-str val)])])))
+               {:on-click #(dispatch [:toggle-log-visible tx])} 
+               (str i " " (:visible val))]
+              [:ul (for [[e a v t] (:datoms val)]
+                           [:li (str "Added "v " as "a" for " e)])]])])))
 
 
 ;; possible that any sub with conn as value is getting reloaded more than needs to
