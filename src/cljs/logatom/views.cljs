@@ -43,6 +43,26 @@
         "Add"]])))
 
 
+
+
+(register-handler
+ :toggle-log-visible
+ (fn [db [_ tx]]
+   (update-in db [:log tx :visible] not)))
+
+
+
+(defn logmap []
+  (let [logmap (subscribe [:log])]
+        (fn []
+          [:div
+           (for [[i [tx val]] (map-indexed vector @logmap)]
+             [:div
+              [:button
+               {:on-click #(dispatch [:toggle-log-visible tx])} i]
+              (pr-str val)])])))
+
+
 ;; possible that any sub with conn as value is getting reloaded more than needs to
 ;; maybe not, if only refreshes if reactoin changes
 
@@ -51,6 +71,8 @@
         log (subscribe [:log])]
   (fn []
     [:div
+     [logmap]
+     [:button {:on-click #(dispatch [:reset-conn conn])} "Reset"]
      [:h1 "CONN"]
      [:div (pr-str @c)]
      [:h1 "Logatom"]

@@ -52,14 +52,18 @@
 
 
 (defn conn-from-log [logatom]
-  (d/conn-from-datoms (select [MAP-VALS #(:visible %) :datoms ALL] logatom) schema))
+  (d/conn-from-datoms (select [MAP-VALS (sp/selected? :visible) :datoms ALL] logatom) schema))
+
+
+
 
 
 
 (register-handler
  :reset-conn
  (fn [db [_ conn]]
- (reset! conn (doto (conn-from-log (:log db)) posh!))))
+ (do (reset! conn (doto (conn-from-log (:log db)) posh!))
+     db)))
 
 
 
@@ -72,7 +76,9 @@
 
 
 
+
 ;;; posh subscriptions
+
 
 
 (register-sub
