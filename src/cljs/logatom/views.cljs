@@ -74,6 +74,6 @@
      [logmap]
      [:button {:on-click #(dispatch [:reset-conn conn])} "Reset"]
      [:h1 "CONN"]
-     [:div (pr-str @c)]
+     [:div (pr-str @@c)]
      [:h1 "Logatom"]
      [:div (pr-str @log)]])))
