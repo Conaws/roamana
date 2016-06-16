@@ -1,5 +1,6 @@
 (ns logatom.core
     (:require [reagent.core :as reagent :refer [atom]]
+              [logatom.logger :refer [conn]]
               [logatom.views :refer [todo-create] :as l]
               [reagent.session :as session]
               [secretary.core :as secretary :include-macros true]
@@ -10,8 +11,8 @@
 
 (defn home-page []
   [:div [:h2 "Welcome to logatom"]
-   [todo-create]
-   [l/main-view]
+   [todo-create conn]
+   [l/main-view conn]
    [:div [:a {:href "/about"} "go to about page"]]])
 
 (defn about-page []

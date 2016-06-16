@@ -34,12 +34,13 @@
 #_(def logatom (local-storage (atom {}) :logatom))
 
 
-(defn transact-log [db logpath conn ents]
+(defn transact-log [db logpath conn & ents]
   (let [txs (d/transact! @conn ents)
         datoms (:tx-data txs)
         txid   (nth (first datoms) 3)]
-    (assoc-in db [logpath txid] {:datoms datoms :visible true})))
-
+    (do
+      (js/console.log txid)
+      (assoc-in db [logpath txid] {:datoms datoms :visible true}))))
 
 
 (register-handler
@@ -59,6 +60,50 @@
  :reset-conn
  (fn [db [_ conn]]
  (reset! conn (doto (conn-from-log (:log db)) posh!))))
+
+
+
+
+
+(register-sub
+ :log
+ (fn [db]
+   (reaction (:log @db))))
+
+
+
+;;; posh subscriptions
+
+
+(register-sub
+ :e
+ (fn [_ [_ conn eid]]
+   (pull @conn '[*] eid)))
+
+
+
+
+
+(defn datom-query [conn]
+  (q conn '[:find ?e ?attr ?val ?tx
+            :where
+            [?e ?attr ?val ?tx]]))
+
+
+
+
+(register-sub
+ :datoms
+ (fn [_ [_ conn]]
+   (datom-query @conn)))
+
+
+(register-sub
+ :db-entities
+ (fn [_ [_ conn]]
+  (q @conn '[:find ?e
+             :where
+             [?e]])))
 
 
 
@@ -141,7 +186,7 @@
 
 
 
-(add-watch logatom
+#_(add-watch logatom
            :logatom
            (fn [_ _ _ v]
              (.log js/console "Logging" v)))
@@ -153,7 +198,7 @@
 
 
 
-(def d2 (d/with (d/empty-db) 
+#_(def d2 (d/with (d/empty-db) 
          (mapv #(concat [(if (nth % 4) :db/add :db/retract)] %)
                (first (select [MAP-VALS :datoms] @logatom)))))
 

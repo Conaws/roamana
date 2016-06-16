@@ -1,6 +1,5 @@
 (ns logatom.views
   (:require [reagent.core    :as r]
-            [logatom.logger  :as log :refer [conn logatom]]
             [cljs.spec        :as s]
             [re-frame.core   :refer [register-sub 
                                      subscribe dispatch register-handler]]
@@ -34,30 +33,25 @@
 
 
 
-(defn submit-form [val]
-  (when-let [c @val]
-   (log/t! conn [c])
-   (js/alert c)
-   (reset! val "")))
 
-
-
-(defn todo-create []
+(defn todo-create [conn]
   (let [r (r/atom {:todo/text "" :todo/done false})]
     (fn []
       [:div
        [input-field "todo" :todo/text r]
-       [:button {:on-click #(submit-form r)}
+       [:button {:on-click #(dispatch [:tlog! conn @r])} 
         "Add"]])))
 
 
+;; possible that any sub with conn as value is getting reloaded more than needs to
+;; maybe not, if only refreshes if reactoin changes
 
-(defn main-view []
+(defn main-view [conn]
+  (let [c (subscribe [:db-entities conn])
+        log (subscribe [:log])]
   (fn []
     [:div
      [:h1 "CONN"]
-     [:div (pr-str @@conn)]
+     [:div (pr-str @c)]
      [:h1 "Logatom"]
-     [:div (pr-str @logatom)]]))
-
-
+     [:div (pr-str @log)]])))
