@@ -51,6 +51,10 @@
 
 
 
+(declare clean-datoms)
+
+;; need to either put in clean-datoms in here, or fixup transactor fn
+;; either should be spec'd so that transaction ids are in right order
 
 (defn conn-from-log [logatom]
   (d/conn-from-datoms (select [MAP-VALS  #(= true (:visible %)) :datoms ALL] logatom) schema))
@@ -59,6 +63,8 @@
 (comment
   (select [MAP-VALS #(= true (:visible %)) :datoms ALL] (:log @app-db))
   (conn-from-log (:log @app-db)))
+
+
 
 
 (register-handler
@@ -117,6 +123,51 @@
                        [?e]]))))
 
 
+#_(def jim1  [[:db/retract 2 :name "James"]
+           [:db/add 2 :name "James"]
+           [:db/add 2 :name "Jim"]])
+
+
+
+(def jim2 [[2 :name "Jimmy" 1123 true][2 :name "Jim" 1111 false][2 :name "Jim" 1100 true]])
+
+
+
+#_(->> jim2
+     (map (partial take 3))
+     (map #{'(2 :name "Jim")}))
+
+
+
+
+(defn clean-datoms 
+  "requires that datoms are in order of newest first"
+  [datoms]
+  (-> (reduce (fn [rm test]
+                (if (nth test 4)
+                  (if (not ((:set rm) (vec (take 3 test))))
+                    (update rm :results #(conj % (vec (take 4 test))))
+                    rm)
+                  (update rm :set #(conj % (vec (take 3 test))))))
+              {:set #{} :results []}
+              datoms)
+      :results))
+
+
+
+(defn datoms-via-transaction [datoms]
+  (d/with (d/empty-db) 
+          (mapv #(concat [(if (nth % 4) :db/add :db/retract)] %) datoms)))
+
+
+
+(def transactiondb (d/create-conn (datoms-via-transaction jim2)))
+
+
+
+(d/q '[:find ?e ?a ?v
+      :where [?e ?a ?v]]
+      @transactiondb '[*] 1)
 
 
 
@@ -207,11 +258,6 @@
 
 
 
-
-
-#_(def d2 (d/with (d/empty-db) 
-         (mapv #(concat [(if (nth % 4) :db/add :db/retract)] %)
-               (first (select [MAP-VALS :datoms] @logatom)))))
 
 
 
