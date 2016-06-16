@@ -9,6 +9,7 @@
                  [reagent "0.6.0-rc"]
                  [reagent-forms "0.5.24"]
                  [reagent-utils "0.1.8"]
+                 [re-frame      "0.7.0"]
                  [datascript                           "0.15.0"]
                  [ring "1.5.0"]
                  [posh "0.3.5"]
