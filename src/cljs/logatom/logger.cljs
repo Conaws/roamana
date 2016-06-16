@@ -2,6 +2,7 @@
   (:require [reagent.core    :as r]
             [cljs.spec        :as s]
             [datascript.core :as d]
+            [re-frame.db     :refer [app-db]]
             [re-frame.core   :refer [register-sub 
                                      subscribe dispatch register-handler]]
             [posh.core       :as posh  :refer [pull posh! q transact!]]
@@ -52,14 +53,21 @@
 
 
 (defn conn-from-log [logatom]
-  (d/conn-from-datoms (select [MAP-VALS #(:visible %) :datoms ALL] logatom) schema))
+  (d/conn-from-datoms (select [MAP-VALS  #(= true (:visible %)) :datoms ALL] logatom) schema))
 
+
+(comment
+  (select [MAP-VALS #(= true (:visible %)) :datoms ALL] (:log @app-db))
+  (conn-from-log (:log @app-db)))
 
 
 (register-handler
  :reset-conn
  (fn [db [_ conn]]
- (reset! conn (doto (conn-from-log (:log db)) posh!))))
+ (do  
+   (reset! conn (doto (conn-from-log (:log db)) posh!))
+   (js/console.log (pr-str @@conn)) 
+   db)))
 
 
 
@@ -70,14 +78,17 @@
  (fn [db]
    (reaction (:log @db))))
 
+@conn
 
 
 ;;; posh subscriptions
+(defn mypull [conn eid]
+  (pull @conn '[*] eid))
 
 
 (register-sub
  :e
- (fn [_ [_ conn eid]]
+ (fn [_ [_ eid] conn]
    (pull @conn '[*] eid)))
 
 
@@ -101,9 +112,9 @@
 (register-sub
  :db-entities
  (fn [_ [_ conn]]
-  (q @conn '[:find ?e
-             :where
-             [?e]])))
+  (reaction (q @conn '[:find ?e
+                       :where
+                       [?e]]))))
 
 
 
