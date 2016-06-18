@@ -1,5 +1,6 @@
 (ns logatom.cards
   (:require [reagent.core :as reagent :refer [atom]]
+            [logatom.graphs]
             [reagent.session :as session]
             [logatom.core :as core])
   (:require-macros
