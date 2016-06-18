@@ -18,11 +18,6 @@
 
 
 
-
-
-
-
-
 (defn input-field [placeholder cursor val]
   [:input {:type "text"
            :placeholder placeholder
@@ -45,37 +40,34 @@
 
 
 
-(register-handler
- :toggle-log-visible
- (fn [db [_ tx]]
-   (update-in db [:log tx :visible] not)))
-
-
-
-(defn logmap []
+(defn logmap [conn]
   (let [logmap (subscribe [:log])]
         (fn []
           [:div
            (for [[i [tx val]] (map-indexed vector @logmap)]
              [:div
               [:button
-               {:on-click #(dispatch [:toggle-log-visible tx])} 
+               {:on-click #(dispatch [:toggle-log-visible tx conn])} 
                (str i " " (:visible val))]
-              [:ul (for [[e a v t] (:datoms val)]
-                           [:li (str "Added "v " as "a" for " e)])]])])))
+              [:span (for [[e a v t] (:datoms val)]
+                           [:span (str "Added "v " as "a" for " e)])]])])))
 
 
 ;; possible that any sub with conn as value is getting reloaded more than needs to
 ;; maybe not, if only refreshes if reactoin changes
+
+(defn e [eid conn]
+  (let [ent (subscribe [:e eid conn])]
+    (fn []
+      [:div (pr-str @@ent)])))
+
 
 (defn main-view [conn]
   (let [c (subscribe [:db-entities conn])
         log (subscribe [:log])]
   (fn []
     [:div
-     [logmap]
-     [:button {:on-click #(dispatch [:reset-conn conn])} "Reset"]
-     [:h1 "CONN"]
-     [:div (pr-str @@c)]
-     [:h1 "Logatom"]
-     [:div (pr-str @log)]])))
+     [logmap conn]
+     [:div (for [[todo] @@c]
+             [e todo conn])]
+     [:button {:on-click #(dispatch [:reset-conn conn])} "Reset"]])))

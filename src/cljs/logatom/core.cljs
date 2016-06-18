@@ -2,6 +2,8 @@
     (:require [reagent.core :as reagent :refer [atom]]
               [logatom.logger :refer [conn]]
               [logatom.views :refer [todo-create] :as l]
+              [logatom.subs]
+              [logatom.handlers]
               [reagent.session :as session]
               [secretary.core :as secretary :include-macros true]
               [accountant.core :as accountant]))
