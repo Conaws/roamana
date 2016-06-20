@@ -31,7 +31,7 @@
 
 (defn todo-create [conn]
   (let [r (r/atom {:todo/text ""})]
-    (fn []
+    (fn [conn]
       [:div
        [input-field "todo" :todo/text r]
        [:button {:on-click #(dispatch [:tlog! conn @r])} 
@@ -42,7 +42,7 @@
 
 (defn logmap [conn]
   (let [logmap (subscribe [:log])]
-        (fn []
+        (fn [conn]
           [:div
            (for [[i [tx val]] (map-indexed vector @logmap)]
              [:div
@@ -58,14 +58,14 @@
 
 (defn e [eid conn]
   (let [ent (subscribe [:e eid conn])]
-    (fn []
+    (fn [ent]
       [:div (pr-str @@ent)])))
 
 
 (defn main-view [conn]
   (let [c (subscribe [:db-entities conn])
         log (subscribe [:log])]
-  (fn []
+  (fn [c log conn]
     [:div
      [logmap conn]
      [:div (for [[todo] @@c]

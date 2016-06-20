@@ -59,10 +59,19 @@ or a formatting string like \"dd MMMM yyyy\""
 (select [MAP-VALS MAP-VALS] (:log @app-db))
 
 
+(declare svg1)
+
+(defn newmain [conn]
+  (fn []
+    [:div
+     (pr-str @@conn)
+     [todo-create conn]
+     [svg1 conn]
+     [main-view conn]]))
+
+
 (defcard-rg mainview
-  [:div
-   [todo-create conn]
-   #_[main-view conn]])
+  [newmain conn])
    
 (select [:log MAP-VALS :datoms ALL (sp/srange 0 3)] @samplelog)
 
@@ -70,13 +79,13 @@ or a formatting string like \"dd MMMM yyyy\""
 
 (defn svg1 [conn]
   (let [l (subscribe [:log])]
-   (fn []
+   (fn [conn]
      (into 
       [:svg {:view-box "0 0 15 15"
              :height 800
              :width 500}]
        (conj
-        (for [[i [tx log]] (map-indexed vector @l)]
+        (for [[i [tx log]] (map-indexed vector (reverse (into (sorted-map) @l)))]
           [:g 
            [:text {:font-size 0.33
                    :x 3
@@ -110,8 +119,10 @@ or a formatting string like \"dd MMMM yyyy\""
                 :stroke-width 0.15}])))))
 
 
-(defcard-rg first-graphs
-    [svg1 conn]
-    samplelog
-    {:inspect-data true})
+
+
+
+
+(defcard-rg first-graph
+    [svg1 conn])
 
