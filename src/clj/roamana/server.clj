@@ -1,5 +1,5 @@
-(ns logatom.server
-  (:require [logatom.handler :refer [app]]
+(ns roamana.server
+  (:require [roamana.handler :refer [app]]
             [config.core :refer [env]]
             [ring.adapter.jetty :refer [run-jetty]])
   (:gen-class))

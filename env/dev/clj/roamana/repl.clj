@@ -1,5 +1,5 @@
-(ns logatom.repl
-  (:use logatom.handler
+(ns roamana.repl
+  (:use roamana.handler
         ring.server.standalone
         [ring.middleware file-info file]))
 

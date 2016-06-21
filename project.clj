@@ -1,4 +1,4 @@
-(defproject logatom "0.1.0-SNAPSHOT"
+(defproject roamana "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -30,14 +30,14 @@
             [lein-asset-minifier "0.2.7"
              :exclusions [org.clojure/clojure]]]
 
-  :ring {:handler logatom.handler/app
-         :uberwar-name "logatom.war"}
+  :ring {:handler roamana.handler/app
+         :uberwar-name "roamana.war"}
 
   :min-lein-version "2.5.0"
 
-  :uberjar-name "logatom.jar"
+  :uberjar-name "roamana.jar"
 
-  :main logatom.server
+  :main roamana.server
 
   :clean-targets ^{:protect false}
   [:target-path
@@ -62,7 +62,7 @@
             :app
             {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
              :compiler
-             {:main "logatom.dev"
+             {:main "roamana.dev"
               :asset-path "/js/out"
               :output-to "target/cljsbuild/public/js/app.js"
               :output-dir "target/cljsbuild/public/js/out"
@@ -74,7 +74,7 @@
             :devcards
             {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
              :figwheel {:devcards true}
-             :compiler {:main "logatom.cards"
+             :compiler {:main "roamana.cards"
                         :asset-path "js/devcards_out"
                         :output-to "target/cljsbuild/public/js/app_devcards.js"
                         :output-dir "target/cljsbuild/public/js/devcards_out"
@@ -92,11 +92,11 @@
    :nrepl-middleware ["cemerick.piggieback/wrap-cljs-repl"
                       ]
    :css-dirs ["resources/public/css"]
-   :ring-handler logatom.handler/app}
+   :ring-handler roamana.handler/app}
 
 
 
-  :profiles {:dev {:repl-options {:init-ns logatom.repl}
+  :profiles {:dev {:repl-options {:init-ns roamana.repl}
 
                    :dependencies [[ring/ring-mock "0.3.0"]
                                   [ring/ring-devel "1.5.0"]

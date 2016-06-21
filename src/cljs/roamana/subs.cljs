@@ -1,4 +1,4 @@
-(ns logatom.subs
+(ns roamana.subs
   (:require [reagent.core    :as r]
             [cljs.spec        :as s]
             [re-frame.core   :refer [register-sub 

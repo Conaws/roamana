@@ -1,0 +1,6 @@
+* Outline
+** For each transaction, grab the transaction ID, and grab all the returned datoms
+** swap into an atom the transaction and all the datoms
+** go through all the keys in the atom -- if they have value :loaded true, put them into loadingpin
+** order the set of datoms with oldest first
+** if the datom is true, add it, otherwise retract it

@@ -1,8 +1,8 @@
 
-(ns logatom.handlers
+(ns roamana.handlers
   (:require [reagent.core    :as r]
             [re-frame.core   :refer [register-handler dispatch]]
-            [logatom.logger :refer [schema]]
+            [roamana.logger :refer [schema]]
             [datascript.core :as d]
             [posh.core       :as posh  :refer [pull posh! q transact!]]
             [cljs.pprint     :refer [pprint]]
@@ -45,8 +45,8 @@
 
 
 
-(defn conn-from-log [logatom]
-  (d/conn-from-datoms (select [MAP-VALS  #(= true (:visible %)) :datoms ALL] logatom) schema))
+(defn conn-from-log [roamana]
+  (d/conn-from-datoms (select [MAP-VALS  #(= true (:visible %)) :datoms ALL] roamana) schema))
 
 
 

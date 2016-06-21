@@ -1,4 +1,4 @@
-(ns logatom.util)
+(ns roamana.util)
 
 (defn foo-cljc [x]
   "I don't do a whole lot."

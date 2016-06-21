@@ -1,1 +1,1 @@
-web: java $JVM_OPTS -cp target/logatom.jar clojure.main -m logatom.server
+web: java $JVM_OPTS -cp target/roam.jar clojure.main -m roam.server

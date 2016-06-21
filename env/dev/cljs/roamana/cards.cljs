@@ -1,8 +1,8 @@
-(ns logatom.cards
+(ns roamana.cards
   (:require [reagent.core :as reagent :refer [atom]]
-            [logatom.graphs]
+            [roamana.graphs]
             [reagent.session :as session]
-            [logatom.core :as core])
+            [roamana.core :as core])
   (:require-macros
    [devcards.core
     :as dc

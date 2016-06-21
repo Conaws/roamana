@@ -1,4 +1,4 @@
-(ns logatom.graphs
+(ns roamana.graphs
   (:require [reagent.core :as reagent :refer [atom]]
             [re-frame.db :refer [app-db]]
             [re-frame.core :refer [subscribe dispatch]]
@@ -6,11 +6,11 @@
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       stay-then-continue 
                                       collect-one comp-paths] :as sp]
-            [logatom.logger :refer [conn]]
-            [logatom.views :refer [main-view logmap todo-create] :as views]
+            [roamana.logger :refer [conn]]
+            [roamana.views :refer [main-view logmap todo-create] :as views]
             [reagent.session :as session]
             [goog.i18n.DateTimeFormat :as dtf]
-            [logatom.core :as core])
+            [roamana.core :as core])
   (:require-macros
    [com.rpl.specter.macros  :refer [select transform declarepath providepath]]
    [devcards.core
@@ -70,7 +70,7 @@ or a formatting string like \"dd MMMM yyyy\""
      [main-view conn]]))
 
 
-(defcard-rg mainview
+(defcard-rg minview
   [newmain conn])
    
 (select [:log MAP-VALS :datoms ALL (sp/srange 0 3)] @samplelog)
@@ -92,7 +92,8 @@ or a formatting string like \"dd MMMM yyyy\""
                    :y i
                    :text-anchor "start"
                    :fill "blue"}
-            (apply str (flatten (vector (short-time tx)
+            (pr-str log)
+            #_(apply str (flatten (vector (short-time tx)
                                 ":  "
                                 (for [[e a v t t?] (:datoms log)]
                                   (str (if t?

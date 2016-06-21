@@ -1,5 +1,5 @@
-(ns ^:figwheel-no-load logatom.dev
-  (:require [logatom.core :as core]
+(ns ^:figwheel-no-load roamana.dev
+  (:require [roamana.core :as core]
             [figwheel.client :as figwheel :include-macros true]))
 
 (enable-console-print!)

@@ -1,4 +1,4 @@
-(ns logatom.logger
+(ns roamana.logger
   (:require [reagent.core    :as r]
             [cljs.spec        :as s]
             [datascript.core :as d]

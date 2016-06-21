@@ -1,8 +1,8 @@
-(ns logatom.handler
+(ns roamana.handler
   (:require [compojure.core :refer [GET defroutes]]
             [compojure.route :refer [not-found resources]]
             [hiccup.page :refer [include-js include-css html5]]
-            [logatom.middleware :refer [wrap-middleware]]
+            [roamana.middleware :refer [wrap-middleware]]
             [config.core :refer [env]]))
 
 (def mount-target
