@@ -213,11 +213,16 @@
 
 
 
+(register-sub
+ :active-entity 
+ (fn [_]
+   (subscribe [:key :active-entity])))
+
 (register-handler
  :add-child
  (fn [db [_ conn]]
-   (let [current-position (subscribe [:key :current-position])]
-     (js/alert @current-position)
+   (let [current (subscribe [:active-entity])]
+     (js/alert @current)
      db)))
      
 
@@ -226,8 +231,10 @@
  (fn [db [_ conn]]
    (let [cursor (subscribe [:cursor])]
      (dispatch [:move-cursor 0])
+     (dispatch [:assoc :editing false])
      (key/bind! "j" ::up      #(dispatch [:move-cursor (inc @cursor)]))
      (key/bind!  "c" ::cursor #(js/alert @cursor))
+     (key/bind!  "e" ::edit #(dispatch [:edit-mode]))
      (key/bind! "k" ::down    #(dispatch [:move-cursor (dec @cursor)]))
      (key/bind! "i" ::child  #(dispatch [:add-child conn]))
      (key/bind! "n" ::new     #(d/transact! conn [{:db/id -1 :node/text "untitled"}]))
@@ -242,21 +249,26 @@
  (fn [db]
    (reaction (:cursor @db))))
 
+(register-sub
+ :edit-mode
+ (fn [db]
+   (reaction (:editing @db false))))
+
 
 (defn node1 [i e conn] 
-  (let [catom (subscribe [:cursor])]
-    (fn []
+  (let [catom (subscribe [:cursor])
+        editing? (subscribe [:edit-mode])]
+    (fn [i e]
       (if (= @catom i)
-        (dispatch [:assoc :current-position e]))
-      [:div
-       {:on-click #(do
-                     (js/alert "hey")
-                     (dispatch [:assoc :current-position e]))
-        :style 
-        {:background-color (if (= @catom i)
-                                    "green"
-                                    "grey")}}
-       (pr-str e)])))
+        (dispatch [:assoc :active-entity e]))
+      (if (and  (= @catom i) @editing?)
+        [:input]
+        [:div        
+         {:style 
+          {:background-color (if (= @catom i)
+                               "green"
+                               "grey")}}
+         (pr-str e)]))))
 
 
 
@@ -268,10 +280,10 @@
       [:div    
        [:button {:on-click #(dispatch [:reset-keys conn])} "SETUP"]
        (for [[i [e]] (map-indexed vector @es)]
-         [node1 i e conn])])))
+        ^{:key e}[node1 i e conn])])))
 
 
-(defcard-rg test-selections1
+(defcard-rg test-selections1*
  [selects1 conn2]
   cc2
   {:inspect-data true
@@ -280,5 +292,34 @@
 
 
 
+
+(register-handler
+ :edit-mode
+ (fn [db]
+   (let [e (subscribe [:active-entity])]
+      (key/unbind-all!)
+      (dispatch [:assoc :editing true])
+      (js/alert (str "Editing " @e))
+   db)))
+
+
+
+
+
+
+(defn node2 [i e conn] 
+  (let [catom (subscribe [:cursor])]
+    (fn [i e]
+      (if (= @catom i)
+        (dispatch [:assoc :active-entity e]))
+      [:div
+       {:on-click #(do
+                     (js/alert "hey")
+                     (dispatch [:assoc :active-entity e]))
+        :style 
+        {:background-color (if (= @catom i)
+                                    "green"
+                                    "grey")}}
+       (pr-str e)])))
 
 
