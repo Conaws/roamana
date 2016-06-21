@@ -1,7 +1,7 @@
 (ns roamana.zz
   (:require [reagent.core :as reagent :refer [atom]]
             [re-frame.db :refer [app-db]]
-            [re-frame.core :refer [subscribe dispatch]]
+            [re-frame.core :refer [subscribe dispatch register-handler register-sub]]
             [posh.core :refer [posh!] :as posh]
             [datascript.core :as d]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
@@ -15,6 +15,7 @@
             [roamana.core :as core])
   (:require-macros
    [com.rpl.specter.macros  :refer [select setval transform declarepath providepath]]
+   [reagent.ratom :refer [reaction]]
    [devcards.core
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
@@ -156,6 +157,7 @@
 
 
 (defonce catom (atom 1))
+
 (defn navkeys [cursor conn2]
   (js/alert @cursor @conn2)
   (key/bind! "j" ::new #(swap! cursor inc))
@@ -183,8 +185,94 @@
          [node catom i e])])))
 
 
-(defcard-rg test-selections
+(defcard-rg test-selections0
  [selects catom conn2]
+  cc2
+  {:inspect-data true
+   :history true})
+
+
+
+(register-handler
+ :move-cursor
+ (fn [db [_ pos]]
+   (assoc db :cursor pos)))
+
+
+
+(register-sub
+ :key
+ (fn [db [_ k]]
+   (reaction (get @db k))))
+
+
+(register-handler
+ :assoc
+ (fn [db [_ k v]]
+   (assoc db k v)))
+
+
+
+(register-handler
+ :add-child
+ (fn [db [_ conn]]
+   (let [current-position (subscribe [:key :current-position])]
+     (js/alert @current-position)
+     db)))
+     
+
+(register-handler
+ :reset-keys
+ (fn [db [_ conn]]
+   (let [cursor (subscribe [:cursor])]
+     (dispatch [:move-cursor 0])
+     (key/bind! "j" ::up      #(dispatch [:move-cursor (inc @cursor)]))
+     (key/bind!  "c" ::cursor #(js/alert @cursor))
+     (key/bind! "k" ::down    #(dispatch [:move-cursor (dec @cursor)]))
+     (key/bind! "i" ::child  #(dispatch [:add-child conn]))
+     (key/bind! "n" ::new     #(d/transact! conn [{:db/id -1 :node/text "untitled"}]))
+     db)))
+
+
+
+
+
+(register-sub
+ :cursor
+ (fn [db]
+   (reaction (:cursor @db))))
+
+
+(defn node1 [i e conn] 
+  (let [catom (subscribe [:cursor])]
+    (fn []
+      (if (= @catom i)
+        (dispatch [:assoc :current-position e]))
+      [:div
+       {:on-click #(do
+                     (js/alert "hey")
+                     (dispatch [:assoc :current-position e]))
+        :style 
+        {:background-color (if (= @catom i)
+                                    "green"
+                                    "grey")}}
+       (pr-str e)])))
+
+
+
+
+(defn selects1 [conn]
+  (let [es (posh/q conn '[:find ?e
+                          :where [?e]])]
+    (fn []
+      [:div    
+       [:button {:on-click #(dispatch [:reset-keys conn])} "SETUP"]
+       (for [[i [e]] (map-indexed vector @es)]
+         [node1 i e conn])])))
+
+
+(defcard-rg test-selections1
+ [selects1 conn2]
   cc2
   {:inspect-data true
    :history true})
