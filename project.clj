@@ -16,6 +16,7 @@
                  [com.rpl/specter                      "0.11.2"]
                  [ring/ring-defaults "0.2.1"]
                  [compojure "1.5.0"]
+                 [keybind "2.0.0"]
                  [alandipert/storage-atom               "2.0.1"]
                  [hiccup "1.0.5"]
                  [yogthos/config "0.8"]
