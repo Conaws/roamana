@@ -151,3 +151,46 @@
   cc2
   {:inspect-data true
    :history true})
+
+
+
+
+(defonce catom (atom 1))
+(defn navkeys [cursor conn2]
+  (js/alert @cursor @conn2)
+  (key/bind! "j" ::new #(swap! cursor inc))
+  (key/bind! "k" ::new #(swap! cursor dec))
+  (key/bind! "n" ::new #(d/transact! conn2 [{:db/id -1 :text "boo"}])) )
+
+
+
+
+(defn node [catom i e]
+    [:div
+     {:style {:background-color (if (= @catom i)
+                                  "red"
+                                  "grey")}}
+     (pr-str e)])
+
+
+(defn selects [catom conn]
+  (let [es (posh/q conn '[:find ?e
+                          :where [?e]])]
+    (fn []
+      [:div    
+       [:button {:on-click #(navkeys catom conn)} "JO"]
+       (for [[i [e]] (map-indexed vector @es)]
+         [node catom i e])])))
+
+
+(defcard-rg test-selections
+ [selects catom conn2]
+  cc2
+  {:inspect-data true
+   :history true})
+
+
+
+
+
+
