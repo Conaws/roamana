@@ -146,10 +146,10 @@
 
 
 (defn ds-fns [conn2]
-  (key/bind! "n" ::new #(d/transact! conn2 [{:db/id -1 :text "boo"}])))
+  (key/bind! "n" ::new #(d/transact! conn2 [{:db/id -1 :node/text "boo"}])))
 
 
-(d/transact! conn2 [{:id 1 :text "hey"}])
+(d/transact! conn2 [{:db/id -1 :node/text "hey"}])
 
 
 (defcard-rg test-cursor
@@ -189,7 +189,7 @@
       [:div    
        [:button {:on-click #(navkeys catom conn)} "JO"]
        (for [[i [e]] (map-indexed vector @es)]
-         [node catom i e])])))
+         ^{:key e}[node catom i e])])))
 
 
 (defcard-rg test-selections0
@@ -222,8 +222,8 @@
 
 (register-sub
  :active-entity 
- (fn [_]
-   (subscribe [:key :active-entity])))
+ (fn [db]
+   (reaction (:active-entity @db 0))))
 
 
 (defn add-child [db [_ conn]]
@@ -264,7 +264,7 @@
 (register-sub
  :cursor
  (fn [db]
-   (reaction (:cursor @db))))
+   (reaction (:cursor @db 0))))
 
 (register-sub
  :edit-mode
@@ -365,7 +365,10 @@
            :background-color (if (= @catom i)
                                "green"
                                "white")}}
-         (pr-str @node)]))))
+         (:node/text @node)
+         (if-let [children (:node/children @node)]
+           (for [c (:node/children @node)]
+             ^{:key c}[:div (pr-str c)]))]))))
 
 
 
@@ -382,6 +385,103 @@
 
 (defcard-rg test-selections2*
  [selects2 conn2]
+  cc2
+  {:inspect-data true
+   :history true})
+
+
+
+
+
+
+(defn node3 [i e conn] 
+  (let [catom (subscribe [:cursor])
+        editing? (subscribe [:edit-mode])
+        text  (subscribe [:key :text])
+        node (posh/pull conn '[*] e)]
+    
+    (fn [i e]
+      #_(if (= @catom i)
+        (dispatch [:assoc :active-entity e]))
+     ; (if false (and  (= @catom i) @editing?)
+        #_[:div
+         [:input
+          {:value @text
+           :style {:width "100%"}
+           :auto-focus "auto-focus"
+           :on-change #(dispatch [:assoc :text (-> % .-target .-value)])}]]
+        [:div        
+         {:style 
+          {
+           :border "1px solid grey"
+           :background-color (if (= @catom i)
+                               "green"
+                               "blue")}}
+         (:node/text @node)
+         (if-let [children (:node/children @node)]
+           (for [c (:node/children @node)]
+             ^{:key c}[:div (pr-str c)]))])))
+;)
+
+
+(d/q '[:find ?e
+       :in $
+       :where [?p :node/text ?text]
+              [_ :node/children ?e]
+    ;   [(not= ?e ?p)]
+       #_[(not= ?text  "untitled")]]
+ @conn2)
+
+
+
+(register-sub
+ :children
+ (fn [_ [_ conn] [ae]]
+     (posh/q conn '[:find ?e
+                    :in $ ?parent
+                    :where  [?parent :node/children ?e]]
+             ae)))
+
+
+(defn children1 [conn]
+  (let [active (subscribe [:active-entity]) 
+        children (subscribe [:children conn][active])]
+    (fn []
+      [:div
+       {:style {:width "50%"
+                :display "flex"
+                :justify-content "center"
+                :flex-direction "column"}}
+       (pr-str @children)
+       #_(for [[i [e]] (map-indexed vector @kids)]
+           ^{:key e}[node3 i e conn])])))
+
+
+(defn selects3 [conn]
+  (let [e (subscribe [:active-entity])
+        es (posh/q conn '[:find ?p
+                          :where 
+                          [?p :node/text _]])
+        kids (posh/q conn '[:find ?p
+                            :where [_ :node/children ?p]])]
+    (fn []
+      (let [roots (clojure.set/difference @es @kids)]
+      [:div    
+       {:style {:display "flex"
+                :flex-direction "row"}}
+       [:button {:on-click #(dispatch [:reset-keys conn])} "SETUP"]
+       [:div 
+        {:style {:width "50%"
+                 :display "flex"
+                 :flex-direction "column"}}
+        (for [[i [e]] (map-indexed vector roots)]
+          ^{:key e}[node2 i e conn])]
+       [children1 conn]]))))
+        
+
+
+(defcard-rg test*
+ [selects3 conn2]
   cc2
   {:inspect-data true
    :history true})
