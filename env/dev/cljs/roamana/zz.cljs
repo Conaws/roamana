@@ -79,7 +79,7 @@
 (defcard-rg blocks
   [blockkey blocks]
   blocks
-  {:inspect-data true
+  #_{:inspect-data true
    :history true})
 
 
@@ -149,7 +149,7 @@
   (key/bind! "n" ::new #(d/transact! conn2 [{:db/id -1 :node/text "boo"}])))
 
 
-(d/transact! conn2 [{:db/id -1 :node/text "hey"}])
+#_(d/transact! conn2 [{:db/id -1 :node/text "hey"}])
 
 
 (defcard-rg test-cursor
@@ -157,7 +157,7 @@
   [:button {:on-click #(ds-fns conn2)} "JO"]
   "hey"]
   cc2
-  {:inspect-data true
+  #_{:inspect-data true
    :history true})
 
 
@@ -195,7 +195,7 @@
 (defcard-rg test-selections0
  [selects catom conn2]
   cc2
-  {:inspect-data true
+  #_{:inspect-data true
    :history true})
 
 
@@ -304,7 +304,7 @@
 (defcard-rg test-selections1*
  [selects1 conn2]
   cc2
-  {:inspect-data true
+  #_{:inspect-data true
    :history true})
 
 
@@ -361,13 +361,28 @@
            :on-change #(dispatch [:assoc :text (-> % .-target .-value)])}]]
         [:div        
          {:style 
-          {:border "1px solid grey"
+          {:display "flex"
+           :align-items "center"
+         ;  :flex-direction "row"
+           :border "1px solid grey"
+           :justify-content "space-between"
            :background-color (if (= @catom i)
                                "green"
                                "white")}}
-         (:node/text @node)
+         [:div
+          {:style {:max-width "50%"}}
+          (:node/text @node)]
          (if-let [children (:node/children @node)]
-           (for [c (:node/children @node)]
+           [:div  
+            {:style {:border "1px solid red"
+                    :background-color "white"
+                                        ; :width "10%"
+                     ;:display "flex"
+                     :margin-left "auto"
+;                     :flex-grow 1
+                     :align-self "flex-end"}}
+            (count children)]
+           #_(for [c (:node/children @node)]
              ^{:key c}[:div (pr-str c)]))]))))
 
 
@@ -386,7 +401,7 @@
 (defcard-rg test-selections2*
  [selects2 conn2]
   cc2
-  {:inspect-data true
+  #_{:inspect-data true
    :history true})
 
 
@@ -419,7 +434,8 @@
                                "blue")}}
          (:node/text @node)
          (if-let [children (:node/children @node)]
-           (for [c (:node/children @node)]
+           (count children)
+           #_(for [c (:node/children @node)]
              ^{:key c}[:div (pr-str c)]))])))
 ;)
 
@@ -480,7 +496,7 @@
         
 
 
-(defcard-rg test*
+(defcard-rg test2
  [selects3 conn2]
   cc2
   {:inspect-data true
