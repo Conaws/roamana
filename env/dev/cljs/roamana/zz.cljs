@@ -85,11 +85,18 @@
 
 
 
+#_(def schema {
+             :node/text    {:db/unique :db.unique/identity}
+             :node/out-edge         {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
+             :edge/to               {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
 
 
-(def schema2 {:person/name {:db/index true}})
+(def schema {:node/children {:db/valueType :db.type/ref
+                             :db/cardinality :db.cardinality/many}})
 
-(defonce conn2 (d/create-conn))
+#_(def schema2 {:person/name {:db/index true}})
+
+(defonce conn2 (d/create-conn schema))
 
 (posh! conn2)
 
@@ -218,23 +225,33 @@
  (fn [_]
    (subscribe [:key :active-entity])))
 
+
+(defn add-child [db [_ conn]]
+   (let [current (subscribe [:active-entity])]
+     (d/transact! conn [{:db/id -1
+                         :node/text "New Node"}
+                        [:db/add @current :node/children -1]]) 
+     db))
+
+
+
+
 (register-handler
  :add-child
- (fn [db [_ conn]]
-   (let [current (subscribe [:active-entity])]
-     (js/alert @current)
-     db)))
+ add-child
+ )
+
      
 
 (register-handler
  :reset-keys
  (fn [db [_ conn]]
    (let [cursor (subscribe [:cursor])]
-     (dispatch [:move-cursor 0])
+     #_(dispatch [:move-cursor cursor])
      (dispatch [:assoc :editing false])
      (key/bind! "j" ::up      #(dispatch [:move-cursor (inc @cursor)]))
      (key/bind!  "c" ::cursor #(js/alert @cursor))
-     (key/bind!  "e" ::edit #(dispatch [:edit-mode]))
+     (key/bind!  "e" ::edit #(dispatch [:edit-mode conn]))
      (key/bind! "k" ::down    #(dispatch [:move-cursor (dec @cursor)]))
      (key/bind! "i" ::child  #(dispatch [:add-child conn]))
      (key/bind! "n" ::new     #(d/transact! conn [{:db/id -1 :node/text "untitled"}]))
@@ -262,7 +279,8 @@
       (if (= @catom i)
         (dispatch [:assoc :active-entity e]))
       (if (and  (= @catom i) @editing?)
-        [:input]
+        [:input
+         {:auto-focus "auto-focus"}]
         [:div        
          {:style 
           {:background-color (if (= @catom i)
@@ -295,11 +313,12 @@
 
 (register-handler
  :edit-mode
- (fn [db]
+ (fn [db [_ conn]]
    (let [e (subscribe [:active-entity])]
       (key/unbind-all!)
       (dispatch [:assoc :editing true])
       (js/alert (str "Editing " @e))
+      (key/bind! "ctrl-n" ::normal #(dispatch [:reset-keys conn]))
    db)))
 
 
