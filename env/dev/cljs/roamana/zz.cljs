@@ -468,8 +468,8 @@
                 :display "flex"
                 :justify-content "center"
                 :flex-direction "column"}}
-       (pr-str @children)
-       #_(for [[i [e]] (map-indexed vector @kids)]
+       #_(pr-str @children)
+       (for [[i [e]] (map-indexed vector @children)]
            ^{:key e}[node3 i e conn])])))
 
 
