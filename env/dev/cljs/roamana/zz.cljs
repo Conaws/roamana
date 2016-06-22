@@ -335,8 +335,8 @@
       (dispatch [:assoc :editing true])
       (dispatch [:assoc :text (:node/text @text)])
       #_(js/alert (str "Editing " @e ))
-      (key/bind! "ctrl-e" ::edit #(dispatch [:edit-text conn]))
-      (key/bind! "ctrl-n" ::normal #(dispatch [:reset-keys conn]))
+      (key/bind! "enter" ::edit #(dispatch [:edit-text conn]))
+      (key/bind! "esc" ::normal #(dispatch [:reset-keys conn]))
    db)))
 
 
