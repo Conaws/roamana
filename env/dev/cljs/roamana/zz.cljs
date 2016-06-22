@@ -311,13 +311,31 @@
 
 
 
+
+(register-handler
+ :edit-text
+ (fn [db [_ conn]]
+   (let [current (subscribe [:active-entity])
+         text (subscribe [:key :text])]
+     (d/transact! conn [[:db/add @current :node/text @text]])
+     (dispatch [:reset-keys conn])
+     db)))
+
+
+
+
+
+
 (register-handler
  :edit-mode
  (fn [db [_ conn]]
-   (let [e (subscribe [:active-entity])]
+   (let [e (subscribe [:active-entity])
+         text (posh/pull conn '[*] @e)]
       (key/unbind-all!)
       (dispatch [:assoc :editing true])
-      (js/alert (str "Editing " @e))
+      (dispatch [:assoc :text (:node/text @text)])
+      #_(js/alert (str "Editing " @e ))
+      (key/bind! "ctrl-e" ::edit #(dispatch [:edit-text conn]))
       (key/bind! "ctrl-n" ::normal #(dispatch [:reset-keys conn]))
    db)))
 
@@ -325,20 +343,48 @@
 
 
 
-
 (defn node2 [i e conn] 
-  (let [catom (subscribe [:cursor])]
+  (let [catom (subscribe [:cursor])
+        editing? (subscribe [:edit-mode])
+        text  (subscribe [:key :text])
+        node (posh/pull conn '[*] e)]
+    
     (fn [i e]
       (if (= @catom i)
         (dispatch [:assoc :active-entity e]))
-      [:div
-       {:on-click #(do
-                     (js/alert "hey")
-                     (dispatch [:assoc :active-entity e]))
-        :style 
-        {:background-color (if (= @catom i)
-                                    "green"
-                                    "grey")}}
-       (pr-str e)])))
+      (if (and  (= @catom i) @editing?)
+        [:div
+         [:input
+          {:value @text
+           :style {:width "100%"}
+           :auto-focus "auto-focus"
+           :on-change #(dispatch [:assoc :text (-> % .-target .-value)])}]]
+        [:div        
+         {:style 
+          {:border "1px solid grey"
+           :background-color (if (= @catom i)
+                               "green"
+                               "white")}}
+         (pr-str @node)]))))
+
+
+
+
+(defn selects2 [conn]
+  (let [es (posh/q conn '[:find ?e
+                          :where [?e]])]
+    (fn []
+      [:div    
+       [:button {:on-click #(dispatch [:reset-keys conn])} "SETUP"]
+       (for [[i [e]] (map-indexed vector @es)]
+        ^{:key e}[node2 i e conn])])))
+
+
+(defcard-rg test-selections2*
+ [selects2 conn2]
+  cc2
+  {:inspect-data true
+   :history true})
+
 
 
