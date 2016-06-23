@@ -368,7 +368,8 @@
            :justify-content "space-between"
            :background-color (if (= @catom i)
                                "green"
-                               "white")}}
+                               "white")}
+          :on-click #(dispatch [:move-cursor i])}
          [:div
           {:style {:max-width "50%"}}
           (:node/text @node)]
@@ -380,7 +381,8 @@
                      ;:display "flex"
                      :margin-left "auto"
 ;                     :flex-grow 1
-                     :align-self "flex-end"}}
+                    ; :align-self "flex-end"
+                     }}
             (count children)]
            #_(for [c (:node/children @node)]
              ^{:key c}[:div (pr-str c)]))]))))
@@ -427,8 +429,7 @@
            :on-change #(dispatch [:assoc :text (-> % .-target .-value)])}]]
         [:div        
          {:style 
-          {
-           :border "1px solid grey"
+          {:border "1px solid grey"
            :background-color (if (= @catom i)
                                "green"
                                "blue")}}
@@ -504,3 +505,82 @@
 
 
 
+(comment
+(defmulti panels identity)
+(defmethod panels :home-panel [] [home-panel])
+(defmethod panels :about-panel [] [about-panel])
+(defmethod panels :default [] [:div])
+
+
+
+
+(defn main-panel []
+  (let [active-panel (subscribe [:active-panel])]
+    (fn []
+      [:div
+       (panels @active-panel)]))))
+
+
+
+
+
+(def cursor-vec (atom {:depth 1
+                       :cursor [1 2 3 4]
+                       :lists [[1 2 3 4 5]
+                               [1 2 3 4 5]
+                               [1 2 3 4 5]
+                               [1 2 3 4 5]]}))
+
+
+
+#_(swap! cursor-vec (fn [m] (transform [:cursor #(nth % 3) LAST] inc m)))
+
+
+
+(defn adjust-cursor [f db]
+  (let [d (:depth db)]
+    (transform [:cursor (sp/srange d (inc  d))] (partial map f) db)))
+
+
+(def inc-cursor (partial adjust-cursor inc))
+(def dec-cursor (partial adjust-cursor dec))
+
+
+@cursor-vec
+
+(swap! cursor-vec inc-cursor)
+
+(defn vec-keys [atom]
+  (key/bind! "l" ::left #(swap! atom update :depth inc))
+  (key/bind! "h" ::right #(swap! atom update :depth dec))
+  (key/bind! "j" ::down  #(swap! atom dec-cursor))
+  (key/bind! "k" ::up  #(swap! atom inc-cursor))
+)
+
+
+(defn vecview [atom]
+  (let [depth (subscribe [:cursor])]
+    (fn []
+      [:div {:style {:display "flex"
+                     :flex-direction "row"}}
+       (pr-str @depth)
+       [:button {:on-click #(vec-keys atom)}]
+       (for [[d column] (map-indexed vector (:lists @atom))]
+         [:div
+          {:style {:flex-grow 1
+                   :border (if (= d (:depth @atom))
+                             "2px solid red"
+                             "1px solid black")}}
+          (for [row column]
+            [:div 
+             (if (and 
+                  (= row (nth (:cursor @atom) d)))
+               [:h2 (pr-str (nth (:cursor @atom) d))]
+               (pr-str row))])])])))
+
+
+(defcard-rg cursortes*t
+  "hey"
+  [vecview cursor-vec]
+  cursor-vec
+  {:inspect-data true})
