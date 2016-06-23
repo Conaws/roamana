@@ -110,7 +110,7 @@
 
 
 
-(defcard-rg demo1
+#_(defcard-rg demo1
   [recomplete-demo])
 
 
@@ -169,7 +169,7 @@
 
 
 
-(dispatch [:dictionary "Juntoist" '("Mike" "Sanjena" "Conor" "Aniq")])
+(dispatch [:dictionary "Juntoist" '("Conor" "Mike" "Sanjena" "Aniq")])
 
 (defcard-rg juntoists
   [rec "Juntoist"])

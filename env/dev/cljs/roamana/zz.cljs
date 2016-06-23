@@ -533,7 +533,7 @@
 
 
 
-#_(swap! cursor-vec (fn [m] (transform [:cursor #(nth % 3) LAST] inc m)))
+#_(swap! cursor-vec (fn [m] (transform [:cursor #(nth % 3) last] inc m)))
 
 
 
@@ -559,7 +559,7 @@
                (partial map 
                         (fn [value]
                           (if (>= 0 (dec value))
-                            count
+                            (dec count)
                             (dec value)))) db)))
 
 
@@ -567,12 +567,14 @@
 #_(def dec-cursor (partial adjust-cursor dec))
 
 
-@cursor-vec
 
-(swap! cursor-vec inc-cursor)
+
+(declare inc-depth)
+
 
 (defn vec-keys [atom]
-  (key/bind! "l" ::left #(swap! atom update :depth inc))
+  (key/unbind-all!)
+  (key/bind! "l" ::left #(swap! atom inc-depth))
   (key/bind! "h" ::right #(swap! atom update :depth dec))
   (key/bind! "j" ::down  #(swap! atom dec-cursor))
   (key/bind! "k" ::up  #(swap! atom inc-cursor))
@@ -580,28 +582,181 @@
 
 
 (defn vecview [atom]
-  (let [depth (subscribe [:cursor])]
-    (fn []
+  (fn []
+    (let [cursor (:cursor @atom)
+          depth (:depth @atom)]
       [:div {:style {:display "flex"
                      :flex-direction "row"}}
-       (pr-str @depth)
-       [:button {:on-click #(vec-keys atom)}]
        (for [[d column] (map-indexed vector (:lists @atom))]
+         ^{:key (str d column)}
          [:div
           {:style {:flex-grow 1
-                   :border (if (= d (:depth @atom))
+                   :border (if (= d depth)
                              "2px solid red"
                              "1px solid black")}}
-          (for [row column]
-            [:div 
-             (if (and 
-                  (= row (nth (:cursor @atom) d)))
-               [:h2 (pr-str (nth (:cursor @atom) d))]
-               (pr-str row))])])])))
+          (for [[r row] (map-indexed vector column)]
+            ^{:key (str d row column)}[:div 
+                                       (if (and 
+                                            (= r (nth cursor d)))
+                                         [:h2 (pr-str (nth cursor d))]
+                                         (pr-str row))])])])))
 
+
+(map-indexed vector [:a :b :c])
 
 (defcard-rg cursortes*t
   "hey"
   [vecview cursor-vec]
   cursor-vec
+  {:inspect-data true})
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+(defonce conn3 (d/create-conn schema))
+(posh! conn3)
+
+
+(def cc3 (cursify conn3))
+
+
+(declare cursor-vec2)
+
+
+(defn current-cursor [catom]
+  (let [{:keys [depth cursor lists]} @catom
+        current-position (nth cursor depth)
+        e (-> lists
+                            (nth depth)
+                            (nth current-position))]
+    [depth 
+     current-position
+     e]))
+
+
+
+
+
+(defn inc-cursor2 [db]
+  (let [d (:depth db)
+        l (:lists db)
+        count (-> (nth l d)
+                  count)]
+    (js/console.log [d l count])
+    (transform [:cursor (sp/srange d (inc d))] 
+               (partial map 
+                        (fn [value]
+                          (if (= count (inc value))
+                            0
+                            (inc value)))) db)))
+
+
+(defn dec-cursor2 [db]
+  (let [d (:depth db)
+        l (:lists db)
+        c (-> (nth l d)
+                  count)]
+    (do (js/console.log [d (nth l d) c])
+        (transform [:cursor (sp/srange d (inc d))] 
+                   (partial map 
+                            (fn [value]
+                              (do
+                                (js/console.log "value" value)
+                                (if (= -1 (dec value))
+                                  (dec c)
+                                  (dec value))))) db))))
+
+
+
+
+(defn inc-depth [atom]
+  (let [d (:depth atom)
+        list-count  (count (:lists atom))]
+    (if (= d (dec list-count))
+      (assoc atom :depth 0)
+      (update atom :depth inc))))
+
+
+(declare add-nodes)
+
+(defn ds-vec-keys [atom conn]
+  (key/unbind-all!)
+  (key/bind! "l" ::left #(swap! atom inc-depth))
+  (key/bind! "h" ::right #(swap! atom update :depth dec))
+  (key/bind! "j" ::down  #(swap! atom dec-cursor2))
+  (key/bind! "k" ::up  #(swap! atom inc-cursor2))
+  (key/bind! "y" ::replace  #(swap! atom (partial add-nodes conn)))
+  (key/bind! "n" ::new #(d/transact! conn [{:db/id -1 :node/text "boo"}])))
+
+
+(defn add-nodes [conn db]
+  (if-let [nodes (posh/q conn '[:find (pull ?e [*])
+                             :where [?e :node/text]])]
+    (-> (update db :lists conj @nodes)
+        (update :cursor conj 0))
+    db))
+
+
+
+
+(def cursor-vec2 (atom {:depth 0
+                        :cursor [0 0 0 0]
+                        :lists [[:a :b :c :d :e]
+                                [:aa :bb :cc :dd]
+                                [1 2 3 4 5]
+                                [:z :y :x]]}))
+
+
+(d/transact! conn3  [{:db/id -1  :node/text "hey"}])
+
+
+(add-nodes conn3 @cursor-vec2)
+
+
+
+
+
+
+
+(defn ds-vecview [catom conn]
+  (let [nodes (posh/q conn '[:find (pull ?e [*])
+                             :where [?e :node/text]])]
+    (fn []
+      [:div
+       [:button {:on-click #(ds-vec-keys catom conn)} "HOTKESY"]
+       [:h1 (pr-str (current-cursor catom))]]
+
+      #_[:div {:style {:display "flex"
+                       :flex-direction "row"}}
+         (pr-str @depth)
+         [:button {:on-click #(vec-keys atom)}]
+         (for [[d column] (map-indexed vector (:lists @atom))]
+           [:div
+            {:style {:flex-grow 1
+                     :border (if (= d (:depth @atom))
+                               "2px solid red"
+                               "1px solid black")}}
+            (for [row column]
+              [:div 
+               (if (and 
+                    (= row (nth (:cursor @atom) d)))
+                 [:h2 (pr-str (nth (:cursor @atom) d))]
+                 (pr-str row))])])])))
+
+
+
+
+
+(defcard-rg cursorvec3
+  [vecview cursor-vec2]
+  cursor-vec2
+  {:inspect-data true})
+
+(defcard-rg cursor-ds-test
+  "hey"
+  [ds-vecview cursor-vec2 conn3]
+  cc3
   {:inspect-data true})
