@@ -192,7 +192,7 @@
          ^{:key e}[node catom i e])])))
 
 
-(defcard-rg test-selections0
+#_(defcard-rg test-selections0
  [selects catom conn2]
   cc2
   #_{:inspect-data true
@@ -301,7 +301,7 @@
         ^{:key e}[node1 i e conn])])))
 
 
-(defcard-rg test-selections1*
+#_(defcard-rg test-selections1*
  [selects1 conn2]
   cc2
   #_{:inspect-data true
@@ -400,7 +400,7 @@
         ^{:key e}[node2 i e conn])])))
 
 
-(defcard-rg test-selections2*
+#_(defcard-rg test-selections2*
  [selects2 conn2]
   cc2
   #_{:inspect-data true
@@ -454,7 +454,7 @@
 (register-sub
  :children
  (fn [_ [_ conn] [ae]]
-     (posh/q conn '[:find ?e
+     (posh/q conn '[:find (pull ?e [*])
                     :in $ ?parent
                     :where  [?parent :node/children ?e]]
              ae)))
