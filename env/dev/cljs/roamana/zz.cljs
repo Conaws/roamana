@@ -471,7 +471,7 @@
                 :flex-direction "column"}}
        #_(pr-str @children)
        (for [[i [e]] (map-indexed vector @children)]
-           ^{:key e}[node3 i e conn])])))
+           ^{:key e}[:div (pr-str e)])])))
 
 
 (defn selects3 [conn]
@@ -491,7 +491,7 @@
         {:style {:width "50%"
                  :display "flex"
                  :flex-direction "column"}}
-        (for [[i [e]] (map-indexed vector roots)]
+        (for [[i [e]] (map-indexed vector (sort roots))]
           ^{:key e}[node2 i e conn])]
        [children1 conn]]))))
         
@@ -537,13 +537,34 @@
 
 
 
-(defn adjust-cursor [f db]
-  (let [d (:depth db)]
-    (transform [:cursor (sp/srange d (inc  d))] (partial map f) db)))
+(defn inc-cursor [db]
+  (let [d (:depth db)
+        l (:lists db)
+        count (-> (nth l d)
+                  count)]
+    (transform [:cursor (sp/srange d (inc d))] 
+               (partial map 
+                        (fn [value]
+                          (if (< count (inc value))
+                            1
+                            (inc value)))) db)))
 
 
-(def inc-cursor (partial adjust-cursor inc))
-(def dec-cursor (partial adjust-cursor dec))
+(defn dec-cursor [db]
+  (let [d (:depth db)
+        l (:lists db)
+        count (-> (nth l d)
+                  count)]
+    (transform [:cursor (sp/srange d (inc d))] 
+               (partial map 
+                        (fn [value]
+                          (if (>= 0 (dec value))
+                            count
+                            (dec value)))) db)))
+
+
+#_(def inc-cursor (partial adjust-cursor inc))
+#_(def dec-cursor (partial adjust-cursor dec))
 
 
 @cursor-vec
