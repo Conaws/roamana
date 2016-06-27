@@ -141,23 +141,32 @@
 
 
 
-(defn cell [cell])
+(defn cell-view [column-depth cell-index eid]
+ (let [cursor (subscribe [::key :cursor])
+       depth (subscribe [::key :depth])] 
+   (fn [column-depth cell-index eid]
+     [:div {}
+      [:button 
+       {:style 
+            {:background-color 
+             (if (and (= @depth column-depth) 
+                      (=  (nth @cursor @depth) cell-index))
+               "green"
+               "blue")}
+        :on-click #(dispatch [::move-cursor column-depth cell-index])} 
+       eid]])))
 
 
-(defn column [d column-val]
+(defn column [column-index column-val]
   (let [cursor (subscribe [::key :cursor])
         depth (subscribe [::key :depth])]
     [:div
      {:style {:flex-grow 1
-              :border (if (= d @depth)
+              :border (if (= column-index @depth)
                         "2px solid red"
                         "1px solid black")}}
-     (for [[r cell] (map-indexed vector column-val)]
-       ^{:key cell}[:div 
-                    (if (and 
-                         (= r (nth @cursor @depth)))
-                      [:h2 cell]
-                      (pr-str cell))])]))
+     (doall (for [[r cell] (map-indexed vector column-val)]
+        ^{:key cell}[cell-view column-index r cell]))]))
 
 
 (defn vecview3 []
@@ -167,8 +176,8 @@
     (fn []
       [:div {:style {:display "flex"
                      :flex-direction "row"}}
-       (for [[d c] (map-indexed vector @list)]
-         ^{:key (str d column)} [column d c])])))
+       (doall (for [[d c] (map-indexed vector @list)]
+          ^{:key (str d column)} [column d c]))])))
 
 
 (declare vec-keysrf)
@@ -187,13 +196,29 @@
                           (update db :depth inc)))))
 
 
+(register-handler ::dec-depth
+                  (fn [db]
+                    
+                    (if (= (:depth db) 0) 
+                      (assoc db :depth (dec (count (:root-list db))))
+                      (update db :depth dec)
+                      )))
 
+
+(setval (keypath 0) 4 [1 2 3 4])
+
+
+(register-handler
+ ::move-cursor
+ (fn [db [_ cell-depth newval]]
+   (->> (setval [:cursor (keypath cell-depth)] newval db)
+        (setval [:depth] cell-depth))))
 
 
 (defn vec-keysrf []
   (key/unbind-all!)
   (key/bind! "l" ::left #(dispatch [::inc-depth]))
-;  (key/bind! "h" ::right #(swap! atom update :depth dec))
+  (key/bind! "h" ::right #(dispatch [::dec-depth]))
   ;(key/bind! "j" ::down  #(swap! atom dec-cursor))
   ;(key/bind! "k" ::up  #(swap! atom inc-cursor))
 )
@@ -208,10 +233,7 @@
 
 
 
-(register-handler
- ::move-cursor
- (fn [db [_ pos]]
-   (assoc db ::cursor pos)))
+
 
 
 
