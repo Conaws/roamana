@@ -215,12 +215,42 @@
         (setval [:depth] cell-depth))))
 
 
+
+
+(register-handler
+ ::dec-cursor
+ (fn [db]
+   (let [d (:depth db) ]
+     (transform [:cursor (keypath d)]
+                (fn [v] 
+                  (if (= 0 v)
+                    (dec (-> db
+                             :root-list
+                             (nth d)
+                             count))
+                    (dec v)))
+                db))))
+
+(register-handler
+ ::inc-cursor
+ (fn [db]
+   (let [d (:depth db) ]
+     (transform [:cursor (keypath d)]
+                (fn [v] 
+                  (if (= (inc v) (-> db
+                                     :root-list
+                                     (nth d)
+                                     count))
+                    0
+                    (inc v)))
+                db))))
+
 (defn vec-keysrf []
   (key/unbind-all!)
   (key/bind! "l" ::left #(dispatch [::inc-depth]))
   (key/bind! "h" ::right #(dispatch [::dec-depth]))
-  ;(key/bind! "j" ::down  #(swap! atom dec-cursor))
-  ;(key/bind! "k" ::up  #(swap! atom inc-cursor))
+  (key/bind! "j" ::down  #(dispatch [::dec-cursor]))
+  (key/bind! "k" ::up  #(dispatch [::inc-cursor]))
 )
 
 
