@@ -77,7 +77,7 @@
 
 
 
-;;root is hidden, or is at the top
+;;root is hidden, or s at the top
 (declare tree->lists)
 
 (declare followpath)
@@ -87,22 +87,24 @@
  (fn [db [_ conn]]
    (let [root (posh/pull conn '[*] (:root-eid db 0))
          path (:path db :node/children)
-         depth (:depth db 4)
-         errthin (posh/pull conn `[:db/id {~path ~depth}] 0)]
+         vdepth (:visible-depth db 4)
+         errthin (posh/pull conn `[:db/id {~path ~vdepth}] 0)]
      (merge db    
             {:root @root
              :depth 0
-             :cursor [[0]]
-             :root-list (followpath [path ALL] :db/id depth @errthin)}))))
+             :cursor (vec (for [i (range vdepth)] 0))
+             :root-list (followpath [path ALL] :db/id vdepth @errthin)}))))
 
 
+(dispatch [::state-from-conn conn])
 
 
+;(def ptest @(posh/pull conn '[{:node/_children ...}] 4))
 
-(def ptest @(posh/pull conn '[{:node/_children ...}] 4))
+
+#_(declarepath repeat-path [walk-path end-path i])
 
 
-(declarepath repeat-path [walk-path end-path i])
 
 (defpathedfn repeat-path [walk-path end-path i]
   (if (= 0 i)
@@ -118,37 +120,89 @@
 
 
 
-
-
-
-
-
-
-
-
-
 (defcard-rg errthing
   [:div
    [:button {:on-click #(dispatch [::state-from-conn conn])} "statre"]
-   [ents conn]]
+   [ents conn]])
+
+
+
+(register-sub
+ ::key
+ (fn [db [_ k]]
+   (reaction (get @db k))))
+
+
+
+(register-handler
+ ::assoc
+ (fn [db [_ k v]]
+   (assoc db k v)))
+
+
+
+(defn cell [cell])
+
+
+(defn column [d column-val]
+  (let [cursor (subscribe [::key :cursor])
+        depth (subscribe [::key :depth])]
+    [:div
+     {:style {:flex-grow 1
+              :border (if (= d @depth)
+                        "2px solid red"
+                        "1px solid black")}}
+     (for [[r cell] (map-indexed vector column-val)]
+       ^{:key cell}[:div 
+                    (if (and 
+                         (= r (nth @cursor @depth)))
+                      [:h2 cell]
+                      (pr-str cell))])]))
+
+
+(defn vecview3 []
+  (let [
+        depth (subscribe [::key :depth])
+        list (subscribe [::key :root-list])]
+    (fn []
+      [:div {:style {:display "flex"
+                     :flex-direction "row"}}
+       (for [[d c] (map-indexed vector @list)]
+         ^{:key (str d column)} [column d c])])))
+
+
+(declare vec-keysrf)
+
+(defcard-rg v3
+  [:div
+   [:button {:on-click #(vec-keysrf)} "hey"]
+   [ vecview3 ] ])
+
+
+(register-handler ::inc-depth
+                  (fn [db]
+                    (do (js/console.log (pr-str (count (:root-list db))))
+                        (if (= (inc (:depth db)) (count (:root-list db)))
+                          (assoc db :depth 0)
+                          (update db :depth inc)))))
+
+
+
+
+
+(defn vec-keysrf []
+  (key/unbind-all!)
+  (key/bind! "l" ::left #(dispatch [::inc-depth]))
+;  (key/bind! "h" ::right #(swap! atom update :depth dec))
+  ;(key/bind! "j" ::down  #(swap! atom dec-cursor))
+  ;(key/bind! "k" ::up  #(swap! atom inc-cursor))
 )
 
 
-#_(s/fdef ::tree->list 
-        :args ::tree
-        :ret  (s/* vector?))
+(vec-keysrf)
 
-
-
-
-(defn tree->lists [tree]
-  [(map :db/id  (:node/children tree))
-   (map :db/id (mapcat :node/children (:node/children tree)))
-   (map :db/id (mapcat :node/children (mapcat :node/children (:node/children tree))))])
-  
-
-
-
+(defcard-rg v4
+  [vecview3])
 
 
 
@@ -161,16 +215,10 @@
 
 
 
-(register-sub
- ::key
- (fn [db [_ k]]
-   (reaction (get @db k))))
 
 
-(register-handler
- ::assoc
- (fn [db [_ k v]]
-   (assoc db k v)))
+
+
 
 
 
