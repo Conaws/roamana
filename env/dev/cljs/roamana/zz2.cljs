@@ -30,7 +30,7 @@
 
 (re-frame.utils/set-loggers! {:warn #(js/console.log "")})
 
-
+(enable-console-print!)
 
 (def schema {:node/children {:db/valueType :db.type/ref
                              :db/cardinality :db.cardinality/many}})
@@ -119,7 +119,6 @@
 
 
 
-
 (defcard-rg errthing
   [:div
    [:button {:on-click #(dispatch [::state-from-conn conn])} "statre"]
@@ -132,6 +131,11 @@
  (fn [db [_ k]]
    (reaction (get @db k))))
 
+
+(register-sub
+ ::root-list
+ (fn [db _ [conn]]
+   (reaction (:root-list @db))))
 
 
 (register-handler
@@ -169,43 +173,43 @@
         ^{:key cell}[cell-view column-index r cell]))]))
 
 
-(defn vecview3 []
+(defn vecview3 [conn]
   (let [
         depth (subscribe [::key :depth])
-        list (subscribe [::key :root-list])]
+        list (subscribe [::root-list])]
     (fn []
       [:div {:style {:display "flex"
                      :flex-direction "row"}}
-       (doall (for [[d c] (map-indexed vector @list)]
-          ^{:key (str d column)} [column d c]))])))
+       (for [[d c] (map-indexed vector @list)]
+          ^{:key (str d column)} [column d c])])))
 
 
 (declare vec-keysrf)
 
 (defcard-rg v3
   [:div
-   [:button {:on-click #(vec-keysrf)} "hey"]
-   [ vecview3 ] ])
+   [:button {:on-click #(vec-keysrf conn)} "hey"]
+   [ vecview3 conn] ])
 
 
-(register-handler ::inc-depth
-                  (fn [db]
-                    (do (js/console.log (pr-str (count (:root-list db))))
-                        (if (= (inc (:depth db)) (count (:root-list db)))
-                          (assoc db :depth 0)
-                          (update db :depth inc)))))
+(register-handler 
+ ::inc-depth
+ (fn [db]
+   (do (js/console.log (pr-str (count (:root-list db))))
+       (if (= (inc (:depth db)) (count (:root-list db)))
+         (assoc db :depth 0)
+         (update db :depth inc)))))
 
 
-(register-handler ::dec-depth
-                  (fn [db]
-                    
-                    (if (= (:depth db) 0) 
-                      (assoc db :depth (dec (count (:root-list db))))
-                      (update db :depth dec)
-                      )))
+(register-handler 
+ ::dec-depth
+ (fn [db]
+   (if (= (:depth db) 0) 
+     (assoc db :depth (dec (count (:root-list db))))
+     (update db :depth dec)
+     )))
 
 
-(setval (keypath 0) 4 [1 2 3 4])
 
 
 (register-handler
@@ -231,6 +235,8 @@
                     (dec v)))
                 db))))
 
+
+
 (register-handler
  ::inc-cursor
  (fn [db]
@@ -245,25 +251,22 @@
                     (inc v)))
                 db))))
 
-(defn vec-keysrf []
+(defn vec-keysrf [conn]
   (key/unbind-all!)
   (key/bind! "l" ::left #(dispatch [::inc-depth]))
   (key/bind! "h" ::right #(dispatch [::dec-depth]))
   (key/bind! "j" ::down  #(dispatch [::dec-cursor]))
   (key/bind! "k" ::up  #(dispatch [::inc-cursor]))
+  (key/bind! "i" ::add-child  #(dispatch [::add-child conn]))
 )
 
 
-(vec-keysrf)
+(vec-keysrf conn)
 
-(defcard-rg v4
-  [vecview3])
-
-
-
-
-
-
+(defcard-rg v4*
+  [vecview3]
+  cc
+  {:inspect-data true})
 
 
 
@@ -275,25 +278,50 @@
 
 
 (register-sub
- ::active-entity 
+ ::active-entity2 
  (fn [db]
-   (reaction (::active-entity @db 0))))
+   (let [depth (:depth @db)
+         list (:root-list @db)
+         cursor (:cursor @db)]
+     (reaction (-> list
+                   (nth depth)
+                   (nth (nth cursor depth)))))))
 
+
+(register-sub
+ ::active-entity
+ (fn [db]
+   (reaction (::active-entity @db))))
 
 
 
 (defn add-child [db [_ conn]]
-   (let [current (subscribe [::active-entity])]
-     (d/transact! conn [{:db/id -1
-                         :node/text "New Node"}
-                        [:db/add @current :node/children -1]]) 
+   (let [current (subscribe [::active-entity2])]
+     (do
+       (js/alert @current)
+       (d/transact! conn [{:db/id -1
+                          :node/text "New Node"}
+                         [:db/add @current :node/children -1]])) 
      db))
+
+
+
+
 
 
 
 (register-handler
  ::add-child
  add-child)
+
+
+
+
+
+
+
+
+(comment 
 
 
 (register-sub
@@ -473,10 +501,7 @@
           ]]))))
         
 
-(register-sub 
- ::all
- (fn [db]
-   (reaction @db)))
+
 
 
 
@@ -849,5 +874,4 @@
   "hey"
   [ds-vecview2 cursor-vec3 conn3]
   cursor-vec3
-  {:inspect-data true})
-
+  {:inspect-data true}))
