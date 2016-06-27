@@ -17,7 +17,12 @@
             [goog.i18n.DateTimeFormat :as dtf]
             [roamana.core :as core])
   (:require-macros
-   [com.rpl.specter.macros  :refer [select setval defnav transform declarepath providepath]]
+   [com.rpl.specter.macros  :refer [select setval defnav 
+                                    defpathedfn
+                                    defnavconstructor
+                                    fixed-pathed-nav
+                                    variable-pathed-nav
+                                    transform declarepath providepath]]
    [reagent.ratom :refer [reaction]]
    [devcards.core
     :as dc
@@ -73,26 +78,76 @@
 
 
 ;;root is hidden, or is at the top
+(declare tree->lists)
+
+(declare followpath)
 
 (register-handler
  ::state-from-conn
  (fn [db [_ conn]]
    (let [root (posh/pull conn '[*] (:root-eid db 0))
-         errthin (posh/pull conn '[:db/id {:node/children 3}] 0)]
+         path (:path db :node/children)
+         depth (:depth db 4)
+         errthin (posh/pull conn `[:db/id {~path ~depth}] 0)]
      (merge db    
             {:root @root
              :depth 0
              :cursor [[0]]
-             :errthin @errthin}))))
+             :root-list (followpath [path ALL] :db/id depth @errthin)}))))
+
+
+
+
+
+(def ptest @(posh/pull conn '[{:node/_children ...}] 4))
+
+
+(declarepath repeat-path [walk-path end-path i])
+
+(defpathedfn repeat-path [walk-path end-path i]
+  (if (= 0 i)
+    end-path
+    [walk-path (repeat-path walk-path end-path (dec i))]))
+
+
+
+(defn followpath [walkpath endpath depth tree]
+  (vec  (for [i (range depth)] 
+        (vec (set (select (repeat-path walkpath endpath i) tree))))))
+
+
+
+
+
+
+
+
+
 
 
 
 
 (defcard-rg errthing
   [:div
-   [:button {:on-click #(dispatch [::state-from-conn conn])} "state"]
+   [:button {:on-click #(dispatch [::state-from-conn conn])} "statre"]
    [ents conn]]
 )
+
+
+#_(s/fdef ::tree->list 
+        :args ::tree
+        :ret  (s/* vector?))
+
+
+
+
+(defn tree->lists [tree]
+  [(map :db/id  (:node/children tree))
+   (map :db/id (mapcat :node/children (:node/children tree)))
+   (map :db/id (mapcat :node/children (mapcat :node/children (:node/children tree))))])
+  
+
+
 
 
 
