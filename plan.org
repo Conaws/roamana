@@ -4,3 +4,11 @@
 ** go through all the keys in the atom -- if they have value :loaded true, put them into loadingpin
 ** order the set of DATOMS with oldest first
 ** if the datom is true, add it, otherwise retract it
+* datascript
+
+
+
+
+         children (select [:node/children ALL :db/id] @root)
+         grandchildren (map #(posh/pull conn '[:db/id {:node/children [:db/id]}] %) children)
+         errthin (posh/pull conn '[:db/id {:node/children 2}] 0)]

@@ -1,4 +1,4 @@
-(ns roamana.zz
+(ns roamana.zz2
   (:require [reagent.core :as reagent :refer [atom]]
             [re-frame.db :refer [app-db]]
             [re-frame.core :refer [subscribe dispatch register-handler register-sub]]
@@ -9,10 +9,11 @@
                                       if-path END cond-path
                                       must pred keypath
                                       collect-one comp-paths] :as sp]
-            [roamana.logger :refer [conn]]
+            [roamana.logger :refer [all-ents]]
             [roamana.views :refer [main-view logmap todo-create] :as views]
             [reagent.session :as session]
             [keybind.core :as key]
+            [roamana.zz :refer [cursify]]
             [goog.i18n.DateTimeFormat :as dtf]
             [roamana.core :as core])
   (:require-macros
@@ -22,183 +23,79 @@
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
+(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
 
-
-(defn some-mount-function [items current-item]
-  (key/bind! "j" ::next #(js/alert items current-item))
-  (key/bind! "shift-space" ::prev #(js/alert current-item))
-  (key/bind! "C-c C-x j" ::chord #(js/alert "ever heard of emacs chords?")))
-
-(defn some-unmount-function []
-  (key/unbind! "j" ::next)
-  (key/unbind! "shift-space" ::prev)
-  (key/unbind! "C-c C-x j" ::chord)
-  ;; or simply:
-  (key/unbind-all!))
-
-
-
-
-
-
-
-
-
-(defcard-rg hey
-[:div
- [:button {:on-click #(some-mount-function [1 2 3 4] 1)} "BIND ING"]
- [:button {:on-click #(key/unbind-all!)} "DISSSS MOUNT"]])
-
-
-
-
-
-(def blocks (atom {:blocks [:red :blue]}))
-
-(declare block-fns)
-
-(defn blockkey [block]
-  (fn [block]
-    [:div
-     [:button {:on-click #(block-fns block)} "blocks"]
-     (for [b (:blocks @block)]
-       [:div (pr-str b)])]))
-
-
-;;  @key/BINDINGS  doesn't show up
-
-
-
-
-(defn block-fns [blocks]
-  (key/bind! "r" ::next #(swap! blocks update :blocks (fn [m]  
-                                                           (conj  m :red))))
-  (key/bind! "b" ::prev #(reset! blocks
-                                (setval [:blocks LAST] :bluer @blocks)))
-  (key/bind! "ctrl-c ctrl-x j" ::chord #(js/alert "ever heard of emacs chords?")))
-
-
-(defcard-rg blocks
-  [blockkey blocks]
-  blocks
-  #_{:inspect-data true
-   :history true})
-
-
-
-
-#_(def schema {
-             :node/text    {:db/unique :db.unique/identity}
-             :node/out-edge         {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
-             :edge/to               {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}})
 
 
 (def schema {:node/children {:db/valueType :db.type/ref
                              :db/cardinality :db.cardinality/many}})
 
-#_(def schema2 {:person/name {:db/index true}})
 
-(defonce conn2 (d/create-conn schema))
+(defonce conn (d/create-conn schema))
+(posh! conn)
 
-(posh! conn2)
-
-
-
-(defn cursor [x getter & [setter]]
-  (when-not (satisfies? cljs.core/IDeref x)
-    (throw (js/Error.
-            "Argument to |cursor| must be an IDeref")))
-  (reify
-    cljs.core/IDeref
-      (-deref [this] (getter @x))
-    cljs.core/IAtom
-    cljs.core/IReset
-      (-reset! [this new-value]
-        (reset! x new-value))
-    cljs.core/IWatchable
-      (-notify-watches [this oldval newval]
-        (doseq [[key f] (.-watches x)]
-          (f key this oldval newval))
-        this)
-      (-add-watch [this k f]
-        (add-watch x k f)
-        this)
-      (-remove-watch [this k]
-        (remove-watch x k)
-        this)))
+(def cc (cursify conn))
 
 
-(defn db->seq
-  {:todo ["Add for db"]}
-  [db]
-  (->> db
-       (map (fn [d] [:e     (:e     d)
-                     :a     (:a     d)
-                     :v     (:v     d)
-                     :tx    (:tx    d)
-                     :added (:added d)
-                     ]))))
+
+(d/transact! conn [{:db/id 0 :node/type :root :node/children #{1 2}}
+                   {:db/id 1 :node/type :text :node/text "Main 1"  
+                    :node/children #{3}} 
+                   {:db/id 2 :node/type :text :node/text "Main 2"
+                    :node/children #{3}} 
+                   {:db/id 3 :node/type :text :node/text "Main 1 &2 : Child 1"
+                    :node/children #{4}} 
+                   {:db/id 4 :node/type :text :node/text "Child 1: Grandkid 1"
+                    :node/children #{5}}
+                   {:db/id 5 :node/type :text :node/text "Grandkid 1 : Great 1"} ])
 
 
-(defn cursify [conn]
-  (cursor conn #(-> % db->seq)))
+(register-sub
+ ::all
+ (fn [db]
+   (reaction @db)))
 
 
-(def cc2 (cursify conn2))
+(register-sub
+ ::all-ents
+ (fn [db [_ conn]]
+   (posh/q conn '[:find (pull ?e [*])
+                    :where  [?e]])))
 
 
-(defn ds-fns [conn2]
-  (key/bind! "n" ::new #(d/transact! conn2 [{:db/id -1 :node/text "boo"}])))
+(defn ents [conn]
+  (let [es (subscribe [::all-ents conn])
+        all (subscribe [::all])]
+  (fn []
+    [:div 
+     [:div (pr-str @all)]])))
 
 
-#_(d/transact! conn2 [{:db/id -1 :node/text "hey"}])
 
+;;root is hidden, or is at the top
 
-(defcard-rg test-cursor
- [:div
-  [:button {:on-click #(ds-fns conn2)} "JO"]
-  "hey"]
-  cc2
-  #_{:inspect-data true
-   :history true})
+(register-handler
+ ::state-from-conn
+ (fn [db [_ conn]]
+   (let [root (posh/pull conn '[*] (:root-eid db 0))
+         errthin (posh/pull conn '[:db/id {:node/children 3}] 0)]
+     (merge db    
+            {:root @root
+             :depth 0
+             :cursor [[0]]
+             :errthin @errthin}))))
 
 
 
 
-(defonce catom (atom 1))
-
-(defn navkeys [cursor conn2]
-  (js/alert @cursor @conn2)
-  (key/bind! "j" ::new #(swap! cursor inc))
-  (key/bind! "k" ::new #(swap! cursor dec))
-  (key/bind! "n" ::new #(d/transact! conn2 [{:db/id -1 :text "boo"}])) )
+(defcard-rg errthing
+  [:div
+   [:button {:on-click #(dispatch [::state-from-conn conn])} "state"]
+   [ents conn]]
+)
 
 
 
-
-(defn node [catom i e]
-    [:div
-     {:style {:background-color (if (= @catom i)
-                                  "red"
-                                  "grey")}}
-     (pr-str e)])
-
-
-(defn selects [catom conn]
-  (let [es (posh/q conn '[:find ?e
-                          :where [?e]])]
-    (fn []
-      [:div    
-       [:button {:on-click #(navkeys catom conn)} "JO"]
-       (for [[i [e]] (map-indexed vector @es)]
-         ^{:key e}[node catom i e])])))
-
-
-(defcard-rg test-selections0
- [selects catom conn2]
-  cc2
-  #_{:inspect-data true
-   :history true})
 
 
 
@@ -228,6 +125,8 @@
    (reaction (::active-entity @db 0))))
 
 
+
+
 (defn add-child [db [_ conn]]
    (let [current (subscribe [::active-entity])]
      (d/transact! conn [{:db/id -1
@@ -237,31 +136,9 @@
 
 
 
-
 (register-handler
  ::add-child
- add-child
- )
-
-     
-
-(register-handler
- ::reset-keys
- (fn [db [_ conn]]
-   (let [cursor (subscribe [::cursor])]
-     #_(dispatch [:move-cursor cursor])
-     (dispatch [::assoc ::editing false])
-     (key/unbind-all!)
-     (key/bind! "j" ::up      #(dispatch [::move-cursor (inc @cursor)]))
-     (key/bind!  "c" ::cursor #(js/alert @cursor))
-     (key/bind!  "e" ::edit #(dispatch [::edit-mode conn]))
-     (key/bind! "k" ::down    #(dispatch [::move-cursor (dec @cursor)]))
-     (key/bind! "i" ::child  #(dispatch [::add-child conn]))
-     (key/bind! "n" ::new     #(d/transact! conn [{:db/id -1 :node/text "untitled"}]))
-     db)))
-
-
-
+ add-child)
 
 
 (register-sub
@@ -275,59 +152,6 @@
    (reaction (::editing @db false))))
 
 
-(defn node1 [i e conn] 
-  (let [catom (subscribe [::cursor])
-        editing? (subscribe [::edit-mode])]
-    (fn [i e]
-      (if (= @catom i)
-        (dispatch [::assoc ::active-entity e]))
-      (if (and  (= @catom i) @editing?)
-        [:input
-         {:auto-focus "auto-focus"}]
-        [:div        
-         {:style 
-          {:background-color (if (= @catom i)
-                               "green"
-                               "grey")}}
-         (pr-str e)]))))
-
-
-
-
-(defn selects1 [conn]
-  (let [es (posh/q conn '[:find ?e
-                          :where [?e]])]
-    (fn []
-      [:div    
-       [:button {:on-click #(dispatch [::reset-keys conn])} "SETUP"]
-       (for [[i [e]] (map-indexed vector @es)]
-        ^{:key e}[node1 i e conn])])))
-
-
-(defcard-rg test-selections1*
- [selects1 conn2]
-  cc2
-  #_{:inspect-data true
-   :history true})
-
-
-
-
-
-
-(register-handler
- ::edit-text
- (fn [db [_ conn]]
-   (let [current (subscribe [::active-entity])
-         text (subscribe [::key ::text])]
-     (d/transact! conn [[:db/add @current :node/text @text]])
-     (dispatch [::reset-keys conn])
-     db)))
-
-
-
-
-
 
 (register-handler
  ::edit-mode
@@ -339,8 +163,35 @@
       (dispatch [::assoc ::text (:node/text @text)])
       #_(js/alert (str "Editing " @e ))
       (key/bind! "enter" ::edit #(dispatch [::edit-text conn]))
-      (key/bind! "esc" ::normal #(dispatch [::reset-keys conn]))
+      (key/bind! "esc" ::normal #(dispatch [::nav-mode conn]))
    db)))
+
+
+
+ (register-handler
+ ::edit-text
+ (fn [db [_ conn]]
+   (let [current (subscribe [::active-entity])
+         text (subscribe [::key ::text])]
+     (d/transact! conn [[:db/add @current :node/text @text]])
+     (dispatch [::nav-mode conn])
+     db)))    
+
+
+
+(register-handler
+ ::nav-mode
+ (fn [db [_ conn]]
+   (let [cursor (subscribe [::cursor])]
+     (dispatch [::assoc ::editing false])
+     (key/unbind-all!)
+     (key/bind! "j" ::up      #(dispatch [::move-cursor (inc @cursor)]))
+     (key/bind!  "c" ::cursor #(js/alert @cursor))
+     (key/bind!  "e" ::edit #(dispatch [::edit-mode conn]))
+     (key/bind! "k" ::down    #(dispatch [::move-cursor (dec @cursor)]))
+     (key/bind! "i" ::child  #(dispatch [::add-child conn]))
+     (key/bind! "n" ::new     #(d/transact! conn [{:db/id -1 :node/text "untitled"}]))
+     db)))
 
 
 
@@ -372,7 +223,7 @@
            :background-color (if (= @catom i)
                                "green"
                                "white")}
-          :on-click #(dispatch [:move-cursor i])}
+          :on-click #(dispatch [::move-cursor i])}
          [:div
           {:style {:max-width "50%"}}
           (:node/text @node)]
@@ -393,24 +244,6 @@
 
 
 
-(defn selects2 [conn]
-  (let [es (posh/q conn '[:find ?e
-                          :where [?e]])]
-    (fn []
-      [:div    
-       [:button {:on-click #(dispatch [::reset-keys conn])} "SETUP"]
-       (for [[i [e]] (map-indexed vector @es)]
-        ^{:key e}[node2 i e conn])])))
-
-
-(defcard-rg test-selections2*
- [selects2 conn2]
-  cc2
-  #_{:inspect-data true
-   :history true})
-
-
-
 
 
 
@@ -421,15 +254,6 @@
         node (posh/pull conn '[*] e)]
     
     (fn [i e]
-      #_(if (= @catom i)
-        (dispatch [:assoc :active-entity e]))
-     ; (if false (and  (= @catom i) @editing?)
-        #_[:div
-         [:input
-          {:value @text
-           :style {:width "100%"}
-           :auto-focus "auto-focus"
-           :on-change #(dispatch [:assoc :text (-> % .-target .-value)])}]]
         [:div        
          {:style 
           {:border "1px solid grey"
@@ -438,19 +262,10 @@
                                "blue")}}
          (:node/text @node)
          (if-let [children (:node/children @node)]
-           (count children)
-           #_(for [c (:node/children @node)]
-             ^{:key c}[:div (pr-str c)]))])))
-;)
+           (count children))])))
 
 
-(d/q '[:find ?e
-       :in $
-       :where [?p :node/text ?text]
-              [_ :node/children ?e]
-    ;   [(not= ?e ?p)]
-       #_[(not= ?text  "untitled")]]
- @conn2)
+
 
 
 
@@ -472,13 +287,15 @@
                 :display "flex"
                 :justify-content "center"
                 :flex-direction "column"}}
-       #_(pr-str @children)
        (for [[i [e]] (map-indexed vector @children)]
            ^{:key e}[:div (pr-str e)])])))
 
 
+
+
 (defn selects3 [conn]
   (let [e (subscribe [::active-entity])
+        db (subscribe [::all])
         es (posh/q conn '[:find ?p
                           :where 
                           [?p :node/text _]])
@@ -486,25 +303,31 @@
                             :where [_ :node/children ?p]])]
     (fn []
       (let [roots (clojure.set/difference @es @kids)]
-      [:div    
-       {:style {:display "flex"
-                :flex-direction "row"}}
-       [:button {:on-click #(dispatch [::reset-keys conn])} "SETUP"]
-       [:div 
-        {:style {:width "50%"
-                 :display "flex"
-                 :flex-direction "column"}}
-        (for [[i [e]] (map-indexed vector (sort roots))]
-          ^{:key e}[node2 i e conn])]
-       [children1 conn]]))))
+        [:div (pr-str @db)
+         [:div    
+          {:style {:display "flex"
+                   :flex-direction "row"}}
+          [:button {:on-click #(dispatch [::nav-mode conn])} "SETUP"]
+          [:div 
+           {:style {:width "50%"
+                    :display "flex"
+                    :flex-direction "column"}}
+           (for [[i [e]] (map-indexed vector (sort roots))]
+             ^{:key e}[node2 i e conn])]
+          [children1 conn]
+          ]]))))
         
 
+(register-sub 
+ ::all
+ (fn [db]
+   (reaction @db)))
 
-(defcard-rg test2
- [selects3 conn2]
-  cc2
-  {:inspect-data true
-   :history true})
+
+
+
+(defcard-rg Editables
+ [selects3 conn])
 
 
 
