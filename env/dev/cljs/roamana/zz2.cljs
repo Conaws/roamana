@@ -13,6 +13,7 @@
             [roamana.views :refer [main-view logmap todo-create] :as views]
             [reagent.session :as session]
             [keybind.core :as key]
+            [cljs.spec  :as s]
             [roamana.zz :refer [cursify]]
             [goog.i18n.DateTimeFormat :as dtf]
             [roamana.core :as core])
@@ -344,7 +345,7 @@
  ::remove-node
  (fn [db [_ conn]]
    (let [eid (subscribe [::active-entity])]
-     (remove-node conn eid)
+     (remove-node conn @eid)
      (dispatch [::state-from-conn conn])
      db)))
 
@@ -451,11 +452,28 @@
    db))
 
 
-(defmulti cell-views (fn [node] (:node/type node :blank)))
 
-(defmethod cell-views  :text [] [:div "text heya"])
-(defmethod cell-views  :root [] [:div "rooot"])
+(declare text-node)
+
+(defmulti cell-views (fn [conn node] (:node/type node :blank)))
+
+(defmethod cell-views  :text [conn node] [text-node conn (:db/id node)])
+(defmethod cell-views  :root [conn node] [:div (count @conn)])
 (defmethod cell-views  :blank [] [:div "blank?"])
+
+
+
+(s/def ::atom
+  (partial instance? cljs.core/Atom))
+
+
+
+
+(s/fdef cell-views :args (s/cat ::atom map?))
+
+(s/instrument #'cell-views)
+
+(enable-console-print!)
 
 
 
@@ -475,7 +493,7 @@
                "grey")}
         :on-click #(dispatch [::move-cursor column-depth cell-index])} 
        eid]
-      (cell-views @e)
+      (cell-views conn @e)
       [:a {:on-click #(do 
                         (dispatch [::assoc :root-eid eid])
                         (dispatch [::state-from-conn conn]))} :r]])))
@@ -507,11 +525,56 @@
 
 
 
-(defcard-rg grijd2
+(defcard-rg grid2
   [gridview2 conn]
   cc)
 
 
+
+(defn text-node [conn e] 
+  (let [active-entity (subscribe [::active-entity])
+        editing? (subscribe [::edit-mode])
+        text  (subscribe [::key ::text])
+        node (posh/pull conn '[*] e)]
+    
+    (fn [conn e]
+      (if (= @active-entity e)
+        (dispatch [::assoc ::active-entity e]))
+      (if (and  (= @active-entity e) @editing?)
+        [:div
+         [:input
+          {:value @text
+           :style {:width "100%"}
+           :auto-focus "auto-focus"
+           :on-change #(dispatch [::assoc ::text (-> % .-target .-value)])}]]
+        [:div        
+         {:style 
+          {:display "flex"
+           :align-items "center"
+         ;  :flex-direction "row"
+           :border "1px solid grey"
+           :justify-content "space-between"
+           :background-color (if (= @active-entity e)
+                               "green"
+                               "white")}
+          ;:on-click #(dispatch [::move-cursor e])
+          }
+         [:div
+          {:style {:max-width "50%"}}
+          (:node/text @node)]
+         (if-let [children (:node/children @node)]
+           [:div  
+            {:style {:border "1px solid red"
+                    :background-color "white"
+                                        ; :width "10%"
+                     ;:display "flex"
+                     :margin-left "auto"
+;                     :flex-grow 1
+                    ; :align-self "flex-end"
+                     }}
+            (count children)]
+           #_(for [c (:node/children @node)]
+             ^{:key c}[:div (pr-str c)]))]))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -599,7 +662,6 @@
          (:node/text @node)
          (if-let [children (:node/children @node)]
            (count children))])))
-
 
 
 
