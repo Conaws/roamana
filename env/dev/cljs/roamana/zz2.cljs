@@ -88,7 +88,7 @@
    (let [root (posh/pull conn '[*] (:root-eid db 0))
          path (:path db :node/children)
          vdepth (:visible-depth db 4)
-         errthin (posh/pull conn `[:db/id {~path ~vdepth}] 0)]
+         errthin (posh/pull conn `[:db/id {~path ~vdepth}] (:db/id @root))]
      (merge db    
             {:root @root
              :depth 0
@@ -122,6 +122,7 @@
 (defcard-rg errthing
   [:div
    [:button {:on-click #(dispatch [::state-from-conn conn])} "statre"]
+   [:button {:on-click #(dispatch [::nav-mode conn])} "SETUP"]
    [ents conn]])
 
 
@@ -145,10 +146,10 @@
 
 
 
-(defn cell-view [column-depth cell-index eid]
+(defn cell-view [conn column-depth cell-index eid]
  (let [cursor (subscribe [::key :cursor])
        depth (subscribe [::key :depth])] 
-   (fn [column-depth cell-index eid]
+   (fn [conn column-depth cell-index eid]
      [:div {}
       [:button 
        {:style 
@@ -158,30 +159,43 @@
                "green"
                "blue")}
         :on-click #(dispatch [::move-cursor column-depth cell-index])} 
-       eid]])))
+       eid]
+      [:a {:on-click #(do 
+                        (dispatch [::assoc :root-eid eid])
+                        (dispatch [::state-from-conn conn]))} :r]])))
 
 
-(defn column [column-index column-val]
+(defn column [conn column-index column-val]
   (let [cursor (subscribe [::key :cursor])
         depth (subscribe [::key :depth])]
-    [:div
-     {:style {:flex-grow 1
-              :border (if (= column-index @depth)
-                        "2px solid red"
-                        "1px solid black")}}
-     (doall (for [[r cell] (map-indexed vector column-val)]
-        ^{:key cell}[cell-view column-index r cell]))]))
+    (fn [conn column-index column-val]
+      [:div
+       {:style {:flex-grow 1
+                :border (if (= column-index @depth)
+                          "2px solid red"
+                          "1px solid black")}}
+       (doall (for [[r cell] (map-indexed vector column-val)]
+                ^{:key cell}[cell-view conn column-index r cell]))])))
 
 
-(defn vecview3 [conn]
-  (let [
-        depth (subscribe [::key :depth])
+
+
+(register-handler
+ ::set-root
+ (fn [db [_ conn eid]]
+   (dispatch [::state-from-conn conn])
+   (assoc db :root-eid eid)))
+
+
+(defn gridview [conn]
+  (let [depth (subscribe [::key :depth])
         list (subscribe [::root-list])]
-    (fn []
+    (fn [conn]
       [:div {:style {:display "flex"
                      :flex-direction "row"}}
+       [:button {:on-click #(dispatch [::set-root conn 0])} 0]
        (for [[d c] (map-indexed vector @list)]
-          ^{:key (str d column)} [column d c])])))
+          ^{:key (str d column)} [column conn d c])])))
 
 
 (declare vec-keysrf)
@@ -189,7 +203,7 @@
 (defcard-rg v3
   [:div
    [:button {:on-click #(vec-keysrf conn)} "hey"]
-   [ vecview3 conn] ])
+   [gridview conn]])
 
 
 (register-handler 
@@ -251,12 +265,17 @@
                     (inc v)))
                 db))))
 
+(defn nav-keys [{:keys [left right down up]}]
+  (key/bind! right ::right #(dispatch [::inc-depth]))
+  (key/bind! left ::left #(dispatch [::dec-depth]))
+  (key/bind! up ::up #(dispatch [::dec-cursor]))
+  (key/bind! down ::down  #(dispatch [::inc-cursor]))
+)
+
+
 (defn vec-keysrf [conn]
   (key/unbind-all!)
-  (key/bind! "l" ::left #(dispatch [::inc-depth]))
-  (key/bind! "h" ::right #(dispatch [::dec-depth]))
-  (key/bind! "j" ::down  #(dispatch [::dec-cursor]))
-  (key/bind! "k" ::up  #(dispatch [::inc-cursor]))
+  (nav-keys {:left "h" :right "l" :down "j" :up "k" })
   (key/bind! "i" ::add-child  #(dispatch [::add-child conn]))
 )
 
@@ -264,49 +283,70 @@
 (vec-keysrf conn)
 
 (defcard-rg v4*
-  [vecview3]
+  [gridview conn]
   cc
   {:inspect-data true})
 
 
 
-
-
-
-
-
-
+(defn active-ent [db]
+  (let [depth (:depth db)
+        list (:root-list db)
+        cursor (:cursor db)]
+    (-> list
+        (nth depth)
+        (nth (nth cursor depth)))))
+    
 
 (register-sub
- ::active-entity2 
+ ::active-entity3
  (fn [db]
-   (let [depth (:depth @db)
-         list (:root-list @db)
-         cursor (:cursor @db)]
-     (reaction (-> list
-                   (nth depth)
-                   (nth (nth cursor depth)))))))
+   (let [depth (reaction (:depth @db))
+         list (reaction (:root-list @db))
+         cursor (reaction (:cursor @db))]
+     (reaction (-> @list
+                   (nth @depth)
+                   (nth (nth @cursor @depth)))))))
+
+
+(register-sub 
+ ::active-entity
+ (fn [db]
+   (reaction (active-ent @db))))
+
 
 
 (register-sub
- ::active-entity
+ ::active-entity2
  (fn [db]
    (reaction (::active-entity @db))))
 
 
 
 (defn add-child [db [_ conn]]
-   (let [current (subscribe [::active-entity2])]
+   (let [current (subscribe [::active-entity])]
      (do
        (js/alert @current)
        (d/transact! conn [{:db/id -1
+                           :node/type :text
                           :node/text "New Node"}
-                         [:db/add @current :node/children -1]])) 
+                         [:db/add @current :node/children -1]])
+       (dispatch [::state-from-conn conn])) 
      db))
 
 
 
+(defn remove-node [conn eid]
+  (d/transact! conn [[:db.fn/retractEntity eid]]))
 
+
+(register-handler
+ ::remove-node
+ (fn [db [_ conn]]
+   (let [eid (subscribe [::active-entity])]
+     (remove-node conn eid)
+     (dispatch [::state-from-conn conn])
+     db)))
 
 
 
@@ -315,19 +355,6 @@
  add-child)
 
 
-
-
-
-
-
-
-(comment 
-
-
-(register-sub
- ::cursor
- (fn [db]
-   (reaction (::cursor @db 0))))
 
 (register-sub
  ::edit-mode
@@ -344,7 +371,7 @@
       (key/unbind-all!)
       (dispatch [::assoc ::editing true])
       (dispatch [::assoc ::text (:node/text @text)])
-      #_(js/alert (str "Editing " @e ))
+      (js/alert (str "Editing " @e ))
       (key/bind! "enter" ::edit #(dispatch [::edit-text conn]))
       (key/bind! "esc" ::normal #(dispatch [::nav-mode conn]))
    db)))
@@ -362,19 +389,145 @@
 
 
 
+(defn node [i e conn] 
+  (let [catom (subscribe [::cursor])
+        editing? (subscribe [::edit-mode])
+        text  (subscribe [::key ::text])
+        node (posh/pull conn '[*] e)]
+    
+    (fn [i e conn]
+      (if (= @catom i)
+        (dispatch [::assoc ::active-entity e]))
+      (if (and  (= @catom i) @editing?)
+        [:div
+         [:input
+          {:value @text
+           :style {:width "100%"}
+           :auto-focus "auto-focus"
+           :on-change #(dispatch [::assoc ::text (-> % .-target .-value)])}]]
+        [:div        
+         {:style 
+          {:display "flex"
+           :align-items "center"
+         ;  :flex-direction "row"
+           :border "1px solid grey"
+           :justify-content "space-between"
+           :background-color (if (= @catom i)
+                               "green"
+                               "white")}
+          :on-click #(dispatch [:move-cursor i])}
+         [:div
+          {:style {:max-width "50%"}}
+          (:node/text @node)]
+         (if-let [children (:node/children @node)]
+           [:div  
+            {:style {:border "1px solid red"
+                    :background-color "white"
+                                        ; :width "10%"
+                     ;:display "flex"
+                     :margin-left "auto"
+;                     :flex-grow 1
+                    ; :align-self "flex-end"
+                     }}
+            (count children)]
+           #_(for [c (:node/children @node)]
+             ^{:key c}[:div (pr-str c)]))]))))
+
+
+
+
+
+
+
 (register-handler
  ::nav-mode
  (fn [db [_ conn]]
-   (let [cursor (subscribe [::cursor])]
-     (dispatch [::assoc ::editing false])
-     (key/unbind-all!)
-     (key/bind! "j" ::up      #(dispatch [::move-cursor (inc @cursor)]))
-     (key/bind!  "c" ::cursor #(js/alert @cursor))
-     (key/bind!  "e" ::edit #(dispatch [::edit-mode conn]))
-     (key/bind! "k" ::down    #(dispatch [::move-cursor (dec @cursor)]))
-     (key/bind! "i" ::child  #(dispatch [::add-child conn]))
-     (key/bind! "n" ::new     #(d/transact! conn [{:db/id -1 :node/text "untitled"}]))
-     db)))
+   (dispatch [::assoc ::editing false])
+   (key/unbind-all!)
+   (nav-keys {:left "h" :right "l" :down "j" :up "k" })
+   (key/bind! "i" ::add-child  #(dispatch [::add-child conn]))
+   (key/bind! "x" ::remove-node  #(dispatch [::remove-node conn]))
+   (key/bind!  "e" ::edit #(dispatch [::edit-mode conn]))
+   db))
+
+
+(defmulti cell-views (fn [node] (:node/type node :blank)))
+
+(defmethod cell-views  :text [] [:div "text heya"])
+(defmethod cell-views  :root [] [:div "rooot"])
+(defmethod cell-views  :blank [] [:div "blank?"])
+
+
+
+
+
+(defn cell-view2 [conn column-depth cell-index eid]
+ (let [active (subscribe [::active-entity])
+       e (posh/pull conn '[*] eid)] 
+   
+   (fn [conn column-depth cell-index eid]
+     [:div {}
+      [:button 
+       {:style 
+            {:background-color 
+             (if (=  eid @active)
+               "green"
+               "grey")}
+        :on-click #(dispatch [::move-cursor column-depth cell-index])} 
+       eid]
+      (cell-views @e)
+      [:a {:on-click #(do 
+                        (dispatch [::assoc :root-eid eid])
+                        (dispatch [::state-from-conn conn]))} :r]])))
+
+
+(defn column2 [conn column-index column-val]
+  (let [depth (subscribe [::key :depth])]
+    (fn [conn column-index column-val]
+      [:div
+       {:style {:flex-grow 1
+                :border (if (= column-index @depth)
+                          "2px solid red"
+                          "1px solid black")}}
+       (doall (for [[r cell] (map-indexed vector column-val)]
+                ^{:key cell}[cell-view2 conn column-index r cell]))])))
+
+
+
+
+(defn gridview2 [conn]
+  (let [depth (subscribe [::key :depth])
+        list (subscribe [::root-list])]
+    (fn [conn]
+      [:div {:style {:display "flex"
+                     :flex-direction "row"}}
+       [:button {:on-click #(dispatch [::set-root conn 0])} 0]
+       (for [[d c] (map-indexed vector @list)]
+          ^{:key (str d column)} [column2 conn d c])])))
+
+
+
+(defcard-rg grijd2
+  [gridview2 conn]
+  cc)
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+
+(comment 
+
+
+(register-sub
+ ::cursor
+ (fn [db]
+   (reaction (::cursor @db 0))))
+
 
 
 
@@ -500,8 +653,6 @@
           [children1 conn]
           ]]))))
         
-
-
 
 
 

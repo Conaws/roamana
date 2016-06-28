@@ -169,7 +169,7 @@
 
 
 
-(dispatch [:dictionary "Juntoist" '("Conor" "Mike" "Sanjena" "Aniq")])
+#_(dispatch [:dictionary "Juntoist" '("Conor" "Mike" "Sanjena" "Aniq")])
 
 (defcard-rg juntoists
   [rec "Juntoist"])
