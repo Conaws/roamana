@@ -4,6 +4,7 @@
             [roamana.zz]
             [roamana.zz2]
             [roamana.complete]
+            [roamana.video]
             [reagent.session :as session]
             [roamana.core :as core])
   (:require-macros

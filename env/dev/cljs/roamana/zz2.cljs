@@ -539,7 +539,7 @@
 
 
 
-(defcard-rg grid-test
+(defcard-rg grid2
   [gridview2 conn]
   cc)
 
