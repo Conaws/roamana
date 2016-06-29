@@ -120,7 +120,7 @@
 
 
 
-(defcard-rg errthing
+#_(defcard-rg errthing
   [:div
    [:button {:on-click #(dispatch [::state-from-conn conn])} "statre"]
    [:button {:on-click #(dispatch [::nav-mode conn])} "SETUP"]
@@ -201,7 +201,7 @@
 
 (declare vec-keysrf)
 
-(defcard-rg v3
+#_(defcard-rg v3
   [:div
    [:button {:on-click #(vec-keysrf conn)} "hey"]
    [gridview conn]])
@@ -281,9 +281,8 @@
 )
 
 
-(vec-keysrf conn)
 
-(defcard-rg v4*
+#_(defcard-rg v4*
   [gridview conn]
   cc
   {:inspect-data true})
@@ -327,7 +326,7 @@
 (defn add-child [db [_ conn]]
    (let [current (subscribe [::active-entity])]
      (do
-       (js/alert @current)
+;       (js/console.log @current)
        (d/transact! conn [{:db/id -1
                            :node/type :text
                           :node/text "New Node"}
@@ -372,7 +371,7 @@
       (key/unbind-all!)
       (dispatch [::assoc ::editing true])
       (dispatch [::assoc ::text (:node/text @text)])
-      (js/alert (str "Editing " @e ))
+;      (js/alert (str "Editing " @e ))
       (key/bind! "enter" ::edit #(dispatch [::edit-text conn]))
       (key/bind! "esc" ::normal #(dispatch [::nav-mode conn]))
    db)))
@@ -448,8 +447,11 @@
    (nav-keys {:left "h" :right "l" :down "j" :up "k" })
    (key/bind! "i" ::add-child  #(dispatch [::add-child conn]))
    (key/bind! "x" ::remove-node  #(dispatch [::remove-node conn]))
+   (key/bind! "r" ::root #(dispatch [::set-root-to-current conn]))
    (key/bind!  "e" ::edit #(dispatch [::edit-mode conn]))
    db))
+
+
 
 
 
@@ -473,7 +475,6 @@
 
 (s/instrument #'cell-views)
 
-(enable-console-print!)
 
 
 
@@ -484,19 +485,31 @@
        e (posh/pull conn '[*] eid)] 
    
    (fn [conn column-depth cell-index eid]
-     [:div {}
-      [:button 
-       {:style 
-            {:background-color 
-             (if (=  eid @active)
-               "green"
-               "grey")}
-        :on-click #(dispatch [::move-cursor column-depth cell-index])} 
-       eid]
+     [:div {:style 
+            {:padding "5px"}}
       (cell-views conn @e)
+      [:button {:style 
+           {:background-color 
+            (if (=  eid @active)
+              "green"
+              "white")}
+           :on-click #(dispatch [::move-cursor column-depth cell-index])}
+       eid]
       [:a {:on-click #(do 
                         (dispatch [::assoc :root-eid eid])
-                        (dispatch [::state-from-conn conn]))} :r]])))
+                        (dispatch [::state-from-conn conn]))} :focus]])))
+
+
+
+
+
+(register-handler
+ ::set-root-to-current
+ (fn [db [_ conn]]
+   (let [ae (active-ent db)]
+     (dispatch [::set-root conn ae])
+     db)))
+
 
 
 (defn column2 [conn column-index column-val]
@@ -516,6 +529,7 @@
 (defn gridview2 [conn]
   (let [depth (subscribe [::key :depth])
         list (subscribe [::root-list])]
+    (dispatch [::nav-mode conn])
     (fn [conn]
       [:div {:style {:display "flex"
                      :flex-direction "row"}}
@@ -525,7 +539,7 @@
 
 
 
-(defcard-rg grid2
+(defcard-rg grid-test
   [gridview2 conn]
   cc)
 
@@ -719,7 +733,7 @@
 
 
 
-(defcard-rg Editables
+#_(defcard-rg Editables
  [selects3 conn])
 
 
@@ -823,7 +837,7 @@
 
 (map-indexed vector [:a :b :c])
 
-(defcard-rg cursortes*t
+#_(defcard-rg cursortes*t
   "hey"
   [vecview cursor-vec]
   cursor-vec
@@ -938,12 +952,12 @@
 
 
 
-(defcard-rg cursorvec3*
+#_(defcard-rg cursorvec3*
   [vecview cursor-vec2]
   cursor-vec2
   {:inspect-data true})
 
-(defcard-rg cursor-ds-test
+#_(defcard-rg cursor-ds-test
   "hey"
   [ds-vecview cursor-vec2 conn3]
   cc3
@@ -1083,7 +1097,7 @@
 
 
 
-(defcard-rg cursor-ds-test2
+#_(defcard-rg cursor-ds-test2
   "hey"
   [ds-vecview2 cursor-vec3 conn3]
   cursor-vec3
