@@ -29,19 +29,23 @@
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
-(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
+#_(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
 
 
-
+(defn start-player []
+	(js/alert "he YOUTUBEy"))
+	
+(aset js/window "onYouTubePlayerReady"  roamana.video/start-player)
 
 
 (defn player [url]
-  (let [u  (if )])
-  [:iframe
-   {:src url
-    :height 400
-    :width 400
-}])
+  (let [url (clojure.string/replace url "watch?v=" "embed/")]  
+    [:div
+     [:script {:src "https://www.youtube.com/iframe_api"}]
+     [:iframe#player1
+      {:src url
+       :height 200
+       :width 300}]]))
 
 
 (def hammock  "https://www.youtube.com/embed/f84n5oFoZBc")
@@ -50,13 +54,21 @@
 
 
 
-(re-find trigBX #"watch?")
+(re-find #"(watch\?)" trigBX)
+(re-matches #".*(watch\?).*" trigBX)
 
 
-(defcard-rg player
-  [player hammock])
 
 
+(defcard-rg playerrr
+  [player trigBX])
+
+
+
+
+
+#_(let [player (.getElementById js/document "player1")]
+  (.playVideo player))
 
 ;<iframe id="ytplayer" type="text/html" width="640" height="390"
 ;  src="https://www.youtube.com/embed/m7lc1uvf-ve?autoplay=1&origin=http://example.com;"
