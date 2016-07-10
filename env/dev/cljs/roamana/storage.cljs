@@ -1,9 +1,10 @@
-(ns roamana.zz2
+(ns roamana.storage
   (:require [reagent.core :as reagent :refer [atom]]
             [re-frame.db :refer [app-db]]
             [re-frame.core :refer [subscribe dispatch register-handler register-sub]]
             [posh.core :refer [posh!] :as posh]
             [datascript.core :as d]
+            [datascript.transit :as dt]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       stay-then-continue 
                                       if-path END cond-path
@@ -29,7 +30,7 @@
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
-(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
+;(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
 
 (enable-console-print!)
 
@@ -39,21 +40,262 @@
 
 (defonce conn (d/create-conn schema))
 (posh! conn)
-
 (def cc (cursify conn))
 
 
 
-(d/transact! conn [{:db/id 0 :node/type :root :node/children #{1 2}}
-                   {:db/id 1 :node/type :text :node/text "Main 1"  
-                    :node/children #{3}} 
-                   {:db/id 2 :node/type :text :node/text "Main 2"
-                    :node/children #{3}} 
-                   {:db/id 3 :node/type :text :node/text "Main 1 &2 : Child 1"
-                    :node/children #{4}} 
-                   {:db/id 4 :node/type :text :node/text "Child 1: Grandkid 1"
-                    :node/children #{5}}
-                   {:db/id 5 :node/type :text :node/text "Grandkid 1 : Great 1"} ])
+
+(defn store! [k v]
+  (js/localStorage.setItem k v))
+
+(defn load! [k]
+  (js/localStorage.getItem k))
+
+
+(defn save-with-transit [kstr db]
+  (let [ds (:ds db)]
+    (->> (assoc db :ds (dt/write-transit-str @ds))
+         pr-str
+         (js/localStorage.setItem kstr))))
+
+
+(defn save-app-to [k db]
+  (->> (transform [:ds] #(pr-str @%) db)
+       pr-str
+       (store! k))
+  db)
+
+(d/listen! conn :persistence
+           (fn [tx-report]
+             (when-let [db (:db-after tx-report)]
+               (js/setTimeout #(save-app-to "app-db" @app-db) 0))))
+
+
+
+(def default-transaction [{:db/id 0 :node/type :root :node/children #{1 2}}
+                          {:db/id 1 :node/type :text :node/text "Main 1"  
+                           :node/children #{3}} 
+                          {:db/id 2 :node/type :text :node/text "Main 2"
+                           :node/children #{3}} 
+                          {:db/id 3 :node/type :text :node/text "Main 1 &2 : Child 1"
+                           :node/children #{4}} 
+                          {:db/id 4 :node/type :text :node/text "Child 1: Grandkid 1"
+                           :node/children #{5}}
+                          {:db/id 5 :node/type :text :node/text "Grandkid 1 : Great 1"}] )
+
+
+
+(register-handler
+ ::init-ds
+ (fn [db [_ conn]]
+   (assoc db :ds  conn)))
+
+
+(dispatch [::init-ds conn])
+
+
+(def ds-db? #(instance? datascript.db/DB %))
+(def ratom? (partial instance? reagent.ratom/RAtom))
+(def atom? (partial instance? cljs.core/Atom))
+
+(s/def ::ds  ds-db?)
+
+
+
+
+
+
+
+(cljs.reader/register-tag-parser!  "datascript/DB"  datascript.db/db-from-reader)
+
+(cljs.reader/register-tag-parser!  "datascript/Datom"  datascript.db/datom-from-reader)
+
+;; replace this with something that saves the whole state
+
+
+
+
+
+
+
+#_(->> @app-db
+     (transform [:ds] #(pr-str @%))
+     pr-str
+     cljs.reader/read-string
+     :ds
+     cljs.reader/read-string)
+
+
+
+
+
+
+(if-let [db (load! "app-db")]
+  (->>  db
+   cljs.reader/read-string
+   :ds
+   cljs.reader/read-string
+   (d/reset-conn! conn))
+  (d/transact! conn default-transaction))
+  
+
+
+
+
+#_(s/fdef load-app
+        :args (s/cat :old-app map? 
+                     :key string?))
+
+
+#_(defn merge-app [old-app app-string]
+  (let [old-conn (:ds old-app)
+        new-ds (:ds (cljs.reader/read-string))]
+    #_(assoc db :ds 
+           (d/reset-conn! old-conn
+                          (dt/read-transit-str ds)))))
+
+
+
+
+
+;(js/localStorage.getItem "a")
+
+
+
+
+
+;(cljs.pprint/pprint 
+ ;(select [(sp/walker atom?)] @app-db))
+
+
+
+
+(defn toStorage
+  "Puts db into localStorage"
+  ([k] (partial toStorage k))
+  ([k conn ]
+   (.setItem js/localStorage k
+     (-> conn pr-str))
+   conn))  
+
+
+(defn ds-to-storage [db]
+  (-> (update db :ds pr-str)
+      toStorage))
+
+
+(defn fromStorage  [k]
+  (.getItem js/localStorage k))
+
+
+
+
+
+
+
+
+
+
+(defn save-ds [db]
+  (let [ds (:ds db)]
+    (toStorage "ds" (pr-str @ds))
+    db))
+
+
+#_(register-handler 
+ ::save
+ (fn [db]
+   (save-ds db)))
+
+
+
+
+
+
+
+#_(register-handler
+ ::load
+ (fn [db]
+   (let [old-ds (fromStorage "ds")
+         ds  (cljs.reader/read-string old-ds)
+         r  (d/reset-conn! (:ds db) ds)]
+     db)))
+
+
+
+
+
+
+;(type conn)
+
+
+
+
+
+
+
+
+
+
+
+
+
+#_(defn save-load [{:keys [save load]}]
+  (key/bind! save  ::save-k #(dispatch [::save]))
+  (key/bind! load ::load-k #(dispatch [::load]))
+)
+
+
+
+
+
+(register-sub
+ ::conn
+ (fn [db]
+   (reaction (:ds @db))))
+
+
+
+(register-handler
+ ::transact
+ (fn [db [_ transaction & {:keys [ds-id] :or {ds-id :ds}}]]
+   (let [conn (get db ds-id)]
+     (d/transact! conn transaction)
+     db)))
+
+
+
+
+
+(register-handler
+ ::load-conn
+ (fn [db] 
+   (let [conn (:ds db)]
+     (or
+      (when-let [stored (js/localStorage.getItem "b")]
+        (let [stored-db (dt/read-transit-str stored)]
+          (when (= (:schema stored-db) schema) ;; check for code update
+            (reset! conn stored-db)
+            (js/alert "hey")
+            true)))
+      (dispatch [::transact [{:db/id 0 :node/type :root :node/children #{1 2}}
+                             {:db/id 1 :node/type :text :node/text "Main 1"  
+                              :node/children #{3}} 
+                             {:db/id 2 :node/type :text :node/text "Main 2"
+                              :node/children #{3}} 
+                             {:db/id 3 :node/type :text :node/text "Main 1 &2 : Child 1"
+                              :node/children #{4}} 
+                             {:db/id 4 :node/type :text :node/text "Child 1: Grandkid 1"
+                              :node/children #{5}}
+                             {:db/id 5 :node/type :text :node/text "Grandkid 1 : Great 1"} ]]
+                ))
+     db)))
+
+
+
+
+(dispatch [::load-conn])
+
 
 
 (register-sub
@@ -64,17 +306,24 @@
 
 (register-sub
  ::all-ents
- (fn [db [_ conn]]
-   (posh/q conn '[:find (pull ?e [*])
-                    :where  [?e]])))
+ (fn [db]
+   (let [conn (subscribe [::conn])]
+     (posh/q @conn '[:find (pull ?e [*])
+                     :where  [?e]]))))
 
 
-(defn ents [conn]
-  (let [es (subscribe [::all-ents conn])
+(defn ents []
+  (let [es (subscribe [::all-ents])
         all (subscribe [::all])]
   (fn []
     [:div 
+     [:div (pr-str @es)]
      [:div (pr-str @all)]])))
+
+
+
+(defcard-rg ents
+  [ents])
 
 
 
@@ -83,10 +332,14 @@
 
 (declare followpath)
 
+
+
+
 (register-handler
  ::state-from-conn
- (fn [db [_ conn]]
-   (let [root (posh/pull conn '[*] (:root-eid db 0))
+ (fn  state-from-conn [db]
+   (let [conn (:ds db)
+         root (posh/pull conn '[*] (:root-eid db 0))
          path (:path db :node/children)
          vdepth (:visible-depth db 4)
          errthin (posh/pull conn `[:db/id {~path ~vdepth}] (:db/id @root))]
@@ -97,13 +350,10 @@
              :root-list (followpath [path ALL] :db/id vdepth @errthin)}))))
 
 
-(dispatch [::state-from-conn conn])
+(dispatch [::state-from-conn])
 
 
-;(def ptest @(posh/pull conn '[{:node/_children ...}] 4))
 
-
-#_(declarepath repeat-path [walk-path end-path i])
 
 
 
@@ -120,11 +370,7 @@
 
 
 
-#_(defcard-rg errthing
-  [:div
-   [:button {:on-click #(dispatch [::state-from-conn conn])} "statre"]
-   [:button {:on-click #(dispatch [::nav-mode conn])} "SETUP"]
-   [ents conn]])
+
 
 
 
@@ -147,64 +393,26 @@
 
 
 
-(defn cell-view [conn column-depth cell-index eid]
- (let [cursor (subscribe [::key :cursor])
-       depth (subscribe [::key :depth])] 
-   (fn [conn column-depth cell-index eid]
-     [:div {}
-      [:button 
-       {:style 
-            {:background-color 
-             (if (and (= @depth column-depth) 
-                      (=  (nth @cursor @depth) cell-index))
-               "green"
-               "blue")}
-        :on-click #(dispatch [::move-cursor column-depth cell-index])} 
-       eid]
-      [:a {:on-click #(do 
-                        (dispatch [::assoc :root-eid eid])
-                        (dispatch [::state-from-conn conn]))} :r]])))
 
 
-(defn column [conn column-index column-val]
-  (let [cursor (subscribe [::key :cursor])
-        depth (subscribe [::key :depth])]
-    (fn [conn column-index column-val]
-      [:div
-       {:style {:flex-grow 1
-                :border (if (= column-index @depth)
-                          "2px solid red"
-                          "1px solid black")}}
-       (doall (for [[r cell] (map-indexed vector column-val)]
-                ^{:key cell}[cell-view conn column-index r cell]))])))
+
+
 
 
 
 
 (register-handler
  ::set-root
- (fn [db [_ conn eid]]
-   (dispatch [::state-from-conn conn])
+ (fn [db [_ eid]]
+   (dispatch [::state-from-conn])
    (assoc db :root-eid eid)))
 
 
-(defn gridview [conn]
-  (let [depth (subscribe [::key :depth])
-        list (subscribe [::root-list])]
-    (fn [conn]
-      [:div {:style {:display "flex"
-                     :flex-direction "row"}}
-       [:button {:on-click #(dispatch [::set-root conn 0])} 0]
-       (for [[d c] (map-indexed vector @list)]
-          ^{:key (str d column)} [column conn d c])])))
 
 
-(declare vec-keysrf)
 
-#_(defcard-rg v3
-  [:div
-   [:button {:on-click #(vec-keysrf conn)} "hey"]
-   [gridview conn]])
+
+
 
 
 (register-handler 
@@ -266,19 +474,23 @@
                     (inc v)))
                 db))))
 
+
+
 (defn nav-keys [{:keys [left right down up]}]
   (key/bind! right ::right #(dispatch [::inc-depth]))
   (key/bind! left ::left #(dispatch [::dec-depth]))
   (key/bind! up ::up #(dispatch [::dec-cursor]))
   (key/bind! down ::down  #(dispatch [::inc-cursor]))
+  #_(key/bind! "ctrl-a" ::aaa  #(do
+                                (js/console.log "saved")
+                                (save "a" @app-db)))
+  
+  #_(key/bind! "ctrl-b" ::bold  #(do
+                              (js/console.log "heyyb")))
 )
 
 
-(defn vec-keysrf [conn]
-  (key/unbind-all!)
-  (nav-keys {:left "h" :right "l" :down "j" :up "k" })
-  (key/bind! "i" ::add-child  #(dispatch [::add-child conn]))
-)
+
 
 
 
@@ -323,15 +535,15 @@
 
 
 
-(defn add-child [db [_ conn]]
-   (let [current (subscribe [::active-entity])]
+(defn add-child [db]
+   (let [conn (:ds db)
+         current (subscribe [::active-entity])]
      (do
-;       (js/console.log @current)
        (d/transact! conn [{:db/id -1
                            :node/type :text
                           :node/text "New Node"}
                          [:db/add @current :node/children -1]])
-       (dispatch [::state-from-conn conn])) 
+       (dispatch [::state-from-conn])) 
      db))
 
 
@@ -342,8 +554,9 @@
 
 (register-handler
  ::remove-node
- (fn [db [_ conn]]
-   (let [eid (subscribe [::active-entity])]
+ (fn [db]
+   (let [conn (:ds conn)
+         eid (subscribe [::active-entity])]
      (remove-node conn @eid)
      (dispatch [::state-from-conn conn])
      db)))
@@ -365,8 +578,9 @@
 
 (register-handler
  ::edit-mode
- (fn [db [_ conn]]
-   (let [e (subscribe [::active-entity])
+ (fn [db]
+   (let [conn (:ds db)
+         e (subscribe [::active-entity])
          text (posh/pull conn '[*] @e)]
       (key/unbind-all!)
       (dispatch [::assoc ::editing true])
@@ -380,8 +594,9 @@
 
  (register-handler
  ::edit-text
- (fn [db [_ conn]]
-   (let [current (subscribe [::active-entity])
+ (fn [db]
+   (let [conn (:ds db)
+         current (subscribe [::active-entity])
          text (subscribe [::key ::text])]
      (d/transact! conn [[:db/add @current :node/text @text]])
      (dispatch [::nav-mode conn])
@@ -389,13 +604,14 @@
 
 
 
-(defn node [i e conn] 
+(defn node [i e] 
   (let [catom (subscribe [::cursor])
         editing? (subscribe [::edit-mode])
         text  (subscribe [::key ::text])
-        node (posh/pull conn '[*] e)]
+        conn (subscribe [::conn])
+        node (posh/pull @conn '[*] e)]
     
-    (fn [i e conn]
+    (fn [i e]
       (if (= @catom i)
         (dispatch [::assoc ::active-entity e]))
       (if (and  (= @catom i) @editing?)
@@ -441,14 +657,15 @@
 
 (register-handler
  ::nav-mode
- (fn [db [_ conn]]
+ (fn [db]
    (dispatch [::assoc ::editing false])
    (key/unbind-all!)
    (nav-keys {:left "h" :right "l" :down "j" :up "k" })
-   (key/bind! "i" ::add-child  #(dispatch [::add-child conn]))
-   (key/bind! "x" ::remove-node  #(dispatch [::remove-node conn]))
-   (key/bind! "r" ::root #(dispatch [::set-root-to-current conn]))
-   (key/bind!  "e" ::edit #(dispatch [::edit-mode conn]))
+   (key/bind! "i" ::add-child  #(dispatch [::add-child]))
+   (key/bind! "x" ::remove-node  #(dispatch [::remove-node]))
+   (key/bind! "r" ::root #(dispatch [::set-root-to-current]))
+   (key/bind!  "e" ::edit #(dispatch [::edit-mode]))
+   #_(save-load  {:save "s" :load "w"})
    db))
 
 
@@ -457,10 +674,10 @@
 
 (declare text-node)
 
-(defmulti cell-views (fn [conn node] (:node/type node :blank)))
+(defmulti cell-views (fn [node] (:node/type node :blank)))
 
-(defmethod cell-views  :text [conn node] [text-node conn (:db/id node)])
-(defmethod cell-views  :root [conn node] [:div (count @conn)])
+(defmethod cell-views  :text [node] [text-node (:db/id node)])
+(defmethod cell-views  :root [node] [:div (pr-str node)])
 (defmethod cell-views  :blank [] [:div "blank?"])
 
 
@@ -480,14 +697,15 @@
 
 
 
-(defn cell-view2 [conn column-depth cell-index eid]
- (let [active (subscribe [::active-entity])
-       e (posh/pull conn '[*] eid)] 
+(defn cell-view2 [column-depth cell-index eid]
+ (let [conn (subscribe [::conn])
+       active (subscribe [::active-entity])
+       e (posh/pull @conn '[*] eid)] 
    
-   (fn [conn column-depth cell-index eid]
+   (fn [column-depth cell-index eid]
      [:div {:style 
             {:padding "5px"}}
-      (cell-views conn @e)
+      (cell-views @e)
       [:button {:style 
            {:background-color 
             (if (=  eid @active)
@@ -497,63 +715,72 @@
        eid]
       [:a {:on-click #(do 
                         (dispatch [::assoc :root-eid eid])
-                        (dispatch [::state-from-conn conn]))} :focus]])))
+                        (dispatch [::state-from-conn]))} :focus]])))
 
 
 
+
+(:root-list
+@app-db
+)
 
 
 (register-handler
  ::set-root-to-current
- (fn [db [_ conn]]
-   (let [ae (active-ent db)]
-     (dispatch [::set-root conn ae])
+ (fn [db]
+   (let [conn (:ds db)
+         ae (active-ent db)]
+     (dispatch [::set-root ae])
      db)))
 
 
 
-(defn column2 [conn column-index column-val]
+(defn column2 [column-index column-val]
   (let [depth (subscribe [::key :depth])]
-    (fn [conn column-index column-val]
+    (fn [column-index column-val]
       [:div
        {:style {:flex-grow 1
                 :border (if (= column-index @depth)
                           "2px solid red"
                           "1px solid black")}}
        (doall (for [[r cell] (map-indexed vector column-val)]
-                ^{:key cell}[cell-view2 conn column-index r cell]))])))
+                ^{:key cell}[cell-view2 column-index r cell]))])))
 
 
 
 
-(defn gridview2 [conn]
+(defn gridview2 []
   (let [depth (subscribe [::key :depth])
         list (subscribe [::root-list])]
-    (dispatch [::nav-mode conn])
-    (fn [conn]
+    (dispatch [::nav-mode])
+    (fn []
       [:div {:style {:display "flex"
                      :flex-direction "row"}}
-       [:button {:on-click #(dispatch [::set-root conn 0])} 0]
+       [:button {:on-click #(dispatch [::set-root 0])} 0]
        (for [[d c] (map-indexed vector @list)]
-          ^{:key (str d column)} [column2 conn d c])])))
+          ^{:key (str d c)} [column2 d c])])))
+
 
 
 
 (defcard-rg grid2
-  [gridview2 conn]
+  [gridview2]
   cc)
 
 
 
-(defn text-node [conn e] 
-  (let [active-entity (subscribe [::active-entity])
+(defn text-node [e] 
+  (let [conn (subscribe [::conn])
+        active-entity (subscribe [::active-entity])
         editing? (subscribe [::edit-mode])
         text  (subscribe [::key ::text])
-        node (posh/pull conn '[*] e)]
+        node (posh/pull @conn '[*] e)]
     
-    (fn [conn e]
-      (if (= @active-entity e)
-        (dispatch [::assoc ::active-entity e]))
+    (fn [e]
+      [:div
+       [:h1  (str "a"  (pr-str e))]
+       (if (= @active-entity e)
+         (dispatch [::assoc ::active-entity e]))]
       (if (and  (= @active-entity e) @editing?)
         [:div
          [:input
@@ -632,52 +859,30 @@
 
 
 
-(defn toStorage
-  "Puts db into localStorage"
-  ([conn] (toStorage "key" conn))
-  ([k conn ]
-   (.setItem js/localStorage k
-     (-> conn pr-str))
-   conn))  
-
-
-(toStorage "conn" @conn)
-
-(def me (atom {:a "a"}))
-
-
-
-(toStorage "a" @me)
-
-
-(reset! me {:b "c"})
 
 
 
 
 
-(defn fromStorage
-  "Read in db process into a map we can merge into app-db."
-  ([] (fromStorage "key"))  
-  ([k]
-   (->> (.getItem js/localStorage k)
-        (cljs.reader/read-string)   
-        ;(<- doto (println "IS SLURPED FROM LOCAL STORAGE"))
-;        txn-seq->txns
-        ;(<- doto (println "IS TXNS PRE-TRANSACT"))
- ;       (map #(transact! conn %))
-  ;      doall
-)
-   ;jj@conn
-))
-
-@conn
-
-(def mapatom {:a conn
-              :b app-db})
 
 
-(subscribe [::conn])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -747,17 +952,7 @@
     display: grid;
     grid-gap: 10px;
     grid-template-columns: repeat(6, 100px);
-    grid-template-rows: 100px 100px  100px 100px;
-    grid-auto-flow: column;
-```
-}"
-
-
-  [:div.wrapper19
-   (for [a (range 20)]
-     [:div.box18 a]
-       )])
-
+    grid-template-rows: 100px 100p")
 
 
 

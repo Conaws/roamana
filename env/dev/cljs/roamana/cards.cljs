@@ -3,6 +3,8 @@
             [roamana.graphs]
             [roamana.zz]
             [roamana.zz2]
+            [roamana.storage]
+            [roamana.storage1]
             [roamana.complete]
             [roamana.video]
             [reagent.session :as session]
