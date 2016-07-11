@@ -91,8 +91,8 @@
    (assoc db :ds  conn)))
 
 
-(dispatch [::init-ds conn])
 
+(dispatch [::init-ds conn])
 
 (def ds-db? #(instance? datascript.db/DB %))
 (def ratom? (partial instance? reagent.ratom/RAtom))
@@ -267,34 +267,8 @@
 
 
 
-(register-handler
- ::load-conn
- (fn [db] 
-   (let [conn (:ds db)]
-     (or
-      (when-let [stored (js/localStorage.getItem "b")]
-        (let [stored-db (dt/read-transit-str stored)]
-          (when (= (:schema stored-db) schema) ;; check for code update
-            (reset! conn stored-db)
-            (js/alert "hey")
-            true)))
-      (dispatch [::transact [{:db/id 0 :node/type :root :node/children #{1 2}}
-                             {:db/id 1 :node/type :text :node/text "Main 1"  
-                              :node/children #{3}} 
-                             {:db/id 2 :node/type :text :node/text "Main 2"
-                              :node/children #{3}} 
-                             {:db/id 3 :node/type :text :node/text "Main 1 &2 : Child 1"
-                              :node/children #{4}} 
-                             {:db/id 4 :node/type :text :node/text "Child 1: Grandkid 1"
-                              :node/children #{5}}
-                             {:db/id 5 :node/type :text :node/text "Grandkid 1 : Great 1"} ]]
-                ))
-     db)))
 
 
-
-
-(dispatch [::load-conn])
 
 
 
