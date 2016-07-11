@@ -5,6 +5,7 @@
             [roamana.zz2]
             [roamana.storage]
             [roamana.storage1]
+            [roamana.gridview]
             [roamana.complete]
             [roamana.video]
             [reagent.session :as session]
