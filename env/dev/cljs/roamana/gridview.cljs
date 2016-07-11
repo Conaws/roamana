@@ -19,7 +19,9 @@
             [goog.i18n.DateTimeFormat :as dtf]
             [roamana.core :as core])
   (:require-macros
-   [com.rpl.specter.macros  :refer [select setval defnav 
+   [com.rpl.specter.macros  :refer [select
+                                    select-one
+                                    setval defnav 
                                     defpathedfn
                                     defnavconstructor
                                     fixed-pathed-nav
@@ -152,8 +154,8 @@
         all (subscribe [::all])]
   (fn []
     [:div 
-     [:div (pr-str @es)]
-     [:div (pr-str @all)]])))
+     #_[:div (pr-str @es)]
+     [:div (pr-str  (dissoc  @all :ds))]])))
 
 
 
@@ -177,10 +179,11 @@
          path (:path db :node/children)
          vdepth (:visible-depth db 4)
          errthin (posh/pull conn `[:db/id {~path ~vdepth}] (:db/id @root))
+         root-list (followpath [path ALL] :db/id vdepth @errthin)
          newdb (merge db    
                      {:root @root
                       :depth (:depth db 0)
-                      :root-list (followpath [path ALL] :db/id vdepth @errthin)})]
+                      :root-list root-list})]
              
      (if (= vdepth (count (:cursor db)))
        newdb
@@ -243,7 +246,10 @@
  ::set-root
  (fn [db [_ eid]]
    (dispatch [::state-from-conn])
-   (assoc db :root-eid eid)))
+   (assoc db 
+          :cursor [0 0 0 0] 
+          :root-eid eid
+          :depth 0)))
 
 
 
@@ -313,20 +319,12 @@
                 db))))
 
 
-
-(defn nav-keys [{:keys [left right down up]}]
-  (key/bind! right ::right #(dispatch [::inc-depth]))
-  (key/bind! left ::left #(dispatch [::dec-depth]))
-  (key/bind! up ::up #(dispatch [::dec-cursor]))
-  (key/bind! down ::down  #(dispatch [::inc-cursor]))
   #_(key/bind! "ctrl-a" ::aaa  #(do
                                 (js/console.log "saved")
                                 (save "a" @app-db)))
   
   #_(key/bind! "ctrl-b" ::bold  #(do
                               (js/console.log "heyyb")))
-)
-
 
 
 
@@ -372,16 +370,21 @@
    (reaction (::active-entity @db))))
 
 
+;(js/localStorage.removeItem "app-db")
+
 
 (defn add-child [db]
    (let [conn (:ds db)
-         current (subscribe [::active-entity])]
-     (do
-       (d/transact! conn [{:db/id -1
+         current (subscribe [::active-entity])
+         kid  (select-one [:tempids (sp/keypath -1)] (d/transact! conn [{:db/id -1
                            :node/type :text
                           :node/text "New Node"}
-                         [:db/add @current :node/children -1]])
-       (dispatch [::state-from-conn])) 
+                         [:db/add @current :node/children -1]]))]
+     (do
+       (dispatch [::state-from-conn]) 
+       (when (= 3 (:depth db))
+         (dispatch [::set-root @current]))
+       (dispatch [::inc-depth]))
      db))
 
 
@@ -446,70 +449,43 @@
 
 
 
-(defn node [i e] 
-  (let [catom (subscribe [::cursor])
-        editing? (subscribe [::edit-mode])
-        text  (subscribe [::key ::text])
-        conn (subscribe [::conn])
-        node (posh/pull @conn '[*] e)]
-    
-    (fn [i e]
-      (if (= @catom i)
-        (dispatch [::assoc ::active-entity e]))
-      (if (and  (= @catom i) @editing?)
-        [:div
-         [:input
-          {:value @text
-           :style {:width "100%"}
-           :auto-focus "auto-focus"
-           :on-change #(dispatch [::assoc ::text (-> % .-target .-value)])}]]
-        [:div        
-         {:style 
-          {:display "flex"
-           :align-items "center"
-         ;  :flex-direction "row"
-           :border "1px solid grey"
-           :justify-content "space-between"
-           :background-color (if (= @catom i)
-                               "green"
-                               "white")}
-          :on-click #(dispatch [:move-cursor i])}
-         [:div
-          {:style {:max-width "50%"}}
-          (:node/text @node)]
-         (if-let [children (:node/children @node)]
-           [:div  
-            {:style {:border "1px solid red"
-                    :background-color "white"
-                                        ; :width "10%"
-                     ;:display "flex"
-                     :margin-left "auto"
-;                     :flex-grow 1
-                    ; :align-self "flex-end"
-                     }}
-            (count children)]
-           #_(for [c (:node/children @node)]
-             ^{:key c}[:div (pr-str c)]))]))))
+(defn nav-keys [{:keys [left right down up]}]
+  (key/bind! right ::right #(dispatch [::inc-depth]))
+  (key/bind! left ::left #(dispatch [::dec-depth]))
+  (key/bind! up ::up #(dispatch [::dec-cursor]))
+  (key/bind! down ::down  #(dispatch [::inc-cursor])))
 
 
+(defn node-keys [{:keys [add-child remove-node set-root edit]}]
+   (key/bind! add-child ::add-child  #(dispatch [::add-child]))
+   (key/bind! remove-node ::remove-node  #(dispatch [::remove-node]))
+   (key/bind! set-root ::root #(dispatch [::set-root-to-current]))
+   (key/bind!  edit ::edit #(dispatch [::edit-mode])))
 
 
+(when (not (::keys @app-db))
+  (dispatch [::assoc ::keys {:nav  {:left "h" :right "l" :down "j" :up "k" }
+                             :node {:add-child "i" 
+                                         :remove-node "x"
+                                         :set-root "r"
+                                         :edit  "e"}}]))
+
+(register-sub
+ ::keys
+ (fn [db]
+   (reaction (::keys @db))))
 
 
 
 (register-handler
  ::nav-mode
  (fn [db]
-   (dispatch [::assoc ::editing false])
-   (key/unbind-all!)
-   (nav-keys {:left "h" :right "l" :down "j" :up "k" })
-   (key/bind! "i" ::add-child  #(dispatch [::add-child]))
-   (key/bind! "x" ::remove-node  #(dispatch [::remove-node]))
-   (key/bind! "r" ::root #(dispatch [::set-root-to-current]))
-   (key/bind!  "e" ::edit #(dispatch [::edit-mode]))
-   #_(save-load  {:save "s" :load "w"})
-   db))
-
+   (let [{:keys [nav node]} (::keys db)]
+     (dispatch [::assoc ::editing false])
+     (key/unbind-all!)
+     (nav-keys nav)
+     (node-keys node)
+     db)))
 
 
 
@@ -636,7 +612,7 @@
            :align-items "center"
          ;  :flex-direction "row"
            :border "1px solid grey"
-           :justify-content "space-between"
+           :justify-coent "space-between"
            :background-color (if (= @active-entity e)
                                "green"
                                "white")}
