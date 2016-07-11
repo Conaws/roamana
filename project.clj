@@ -11,6 +11,7 @@
                  [reagent-utils "0.1.8"]
                  [re-frame      "0.7.0"]
                  [datascript                           "0.15.0"]
+                 [datascript-transit   "0.2.0"]
                  [ring "1.5.0"]
                  [posh "0.3.5"]
                  [com.rpl/specter                      "0.11.2"]
