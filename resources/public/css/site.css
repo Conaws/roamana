@@ -479,11 +479,15 @@ background-color: green;
 
 .flexgrid00 {
     display: grid;
+        grid-column-gap: 2em;
+        grid-template-columns: 2fr 4fr;
     grid-template-areas:  "header header"
                               "content sidebar"
                               "footer footer";
 }
 
 
-
+.flexgrid00 button {
+    flex: 0.2 0.2 5px;
+}
 

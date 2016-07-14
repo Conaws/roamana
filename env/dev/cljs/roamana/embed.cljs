@@ -224,6 +224,7 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 (defn navbar []
    [:div {:style {:grid-area "header"
                   :display "flex"
+                  :justify-content  "space-around"
                   :background-color "green"}}
     [:button.box 1]
     [:button 2]
@@ -233,7 +234,13 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 (defcard-rg flexgrid
   [:div.flexgrid00
    [navbar]
-   [:div {:style {:grid-area "content"}}
+   [:div {:style {:grid-area "content"
+                  :padding "1em"}}
+    [:div.box {:style {:float "left"
+                       :margin-top "4em"
+                       :margin-right "2em"
+                       :margin-bottom "4em"
+                       :shape-outside "circle()"}} 4]
     lorem]
    [:div {:style {:grid-area "sidebar"}}
     "abcededf"]
