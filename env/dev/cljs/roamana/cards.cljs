@@ -4,6 +4,7 @@
             [roamana.zz]
             [roamana.zz2]
             [roamana.storage]
+            [roamana.embed]
             [roamana.storage1]
             [roamana.gridview]
             [roamana.complete]
@@ -25,3 +26,4 @@
 
 ;; remember to run 'lein figwheel devcards' and then browse to
 ;; http://localhost:3449/cards
+
