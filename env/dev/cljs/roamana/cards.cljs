@@ -7,6 +7,7 @@
             [roamana.embed]
             [roamana.storage1]
             [roamana.gridview]
+            [roamana.popover]
             [roamana.complete]
             [roamana.video]
             [reagent.session :as session]

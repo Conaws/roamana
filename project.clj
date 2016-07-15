@@ -18,6 +18,8 @@
                  [ring/ring-defaults "0.2.1"]
                  [compojure "1.5.0"]
                  [keybind "2.0.0"]
+                 [cljsjs/rangy-textrange        "1.3.0-1"]
+                 [cljsjs/rangy-core             "1.3.0-1"]
                  [re-complete                "0.1.4-1-SNAPSHOT"]
                  [alandipert/storage-atom               "2.0.1"]
                  [hiccup "1.0.5"]

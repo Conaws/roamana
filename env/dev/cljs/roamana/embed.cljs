@@ -247,3 +247,15 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
    [:div {:style {:grid-area "footer"
                   :background-color "#4B4B4B"}}
     "efgh"]])
+
+
+
+
+
+(defn get-text []
+  (if-let [a (js/window.getSelection)]
+    (js/alert a)))
+
+
+
+(key/bind! "ctrl-i" :get-text #(get-text))
