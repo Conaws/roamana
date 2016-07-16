@@ -8,6 +8,7 @@
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       stay-then-continue 
                                       if-path END cond-path
+                                      srange 
                                       must pred keypath
                                       collect-one comp-paths] :as sp]
             [roamana.logger :refer [all-ents]]
@@ -229,7 +230,7 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
  ::down
  (fn [db]
 ;   (js/alert "down")
-   (if (> 10 (::depth db))
+   (if (> 20 (::depth db))
      (update db ::depth inc)
      (assoc db ::depth 0))))
 
@@ -267,8 +268,61 @@ r)))
 
 
 
+(s/fdef mynew
+        :args  (s/cat :depth integer?
+                      :max (s/? integer?))
+        :ret  (s/cat  :start integer? :end integer?)
+        :fn  #(and  (<= 0 (-> %  :ret :start))))
+        
+
+
+(defn mynew
+  ([x]
+   (let [y (- x 10)]
+     [(if (<= 0 y)
+        y
+        0) 
+      x]))
+  ([z maxval]
+   (let [x (min z maxval)
+         y (- x 10)]
+     [(if (<= 0 y)
+        y
+        0) 
+      x])))
+
+
+(s/instrument #'mynew)
+
+
+
+(register-sub
+ ::nahnah
+ (fn [_ _ [total depth]]
+   (let [d  (max 10 (inc depth))]
+     (reaction (select-one (apply srange (mynew d (count total))) total)))))
+
+
+
+(register-sub
+ ::nah
+ (fn [_ _ [total depth]]
+   (let [d  (max 10 (inc depth))
+         dd  (min d (count total))]
+     (reaction (select-one (srange 0 dd) total)))))
+
+
+
+(register-sub
+ ::results3
+ (fn [_]
+   (let [total (subscribe [::results1])
+         depth  (subscribe [::depth])]
+     (subscribe [::nah] [total depth]))))
+
+
 (defn outline []
-  (let [results  (subscribe [::results1])
+  (let [results  (subscribe [::results3])
         depth (subscribe [::depth])]
     (fn []
         [:div.outline
@@ -328,5 +382,9 @@ r)))
 
 
 
-
+(defcard-rg  aaa
+  [:button
+   {:on-click #(search-keys)}
+   :keys]
+  )
 (search-keys)

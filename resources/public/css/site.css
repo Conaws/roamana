@@ -529,11 +529,20 @@ background-color: green;
     flex: 1 1 100px;
 }
 
-.outline {
+.outline0 {
     grid-area: outline;
     display: grid;
     background-color: #474747;
     grid-template-rows: repeat(11, [row] 9.1%);
+    height: 500px;
+    overflow: hidden;
+}
+
+.outline {
+    grid-area: outline;
+    display: grid;
+    background-color: #474747;
+    grid-template-rows: repeat(auto, [row] 1fr);
     height: 500px;
     overflow: hidden;
 }
