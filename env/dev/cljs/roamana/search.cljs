@@ -176,23 +176,6 @@
 
 
 
-(register-handler
- ::state-from-conn
- (fn  state-from-conn [db]
-   (let [conn (:ds db)
-         root (posh/pull conn '[*] (:root-eid db 0))
-         path (:path db :node/children)
-         vdepth (:visible-depth db 4)
-         errthin (posh/pull conn `[:db/id {~path ~vdepth}] (:db/id @root))]
-     (merge db    
-            {:root @root
-             :depth 0
-             :cursor (vec (for [i (range vdepth)] 0))
-             :root-list (followpath [path ALL] :db/id vdepth @errthin)}))))
-
-
-(dispatch [::state-from-conn])
-
 
 
 
@@ -533,10 +516,12 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
       [:div.search
        [:input#search
         {:value @s
-         :on-change  #(dispatch [::assoc ::search (->
-                                                   %
-                                                   .-target
-                                                   .-value)])}]
+         :on-change  #(do
+                        (dispatch [::assoc ::depth 0])
+                        (dispatch [::assoc ::search (->
+                                                       %
+                                                       .-target
+                                                       .-value)]))}]
        [:button :a]
        [:button :b]])))
 
@@ -570,21 +555,79 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
                                  (repeat ")"))))
 
 
-(re-find  (ido-regex "abcd") "AghbhdblkjClkjhlkd" )
+
+#_(register-handler
+ ::state-from-conn
+ (fn  state-from-conn [db]
+   (let [conn (:ds db)
+         root (posh/pull conn '[*] (:root-eid db 0))
+         path (:path db :node/children)
+         vdepth (:visible-depth db 4)
+         errthin (posh/pull conn `[:db/id {~path ~vdepth}] (:db/id @root))]
+     (merge db    
+            {:root @root
+             :depth 0
+             :cursor (vec (for [i (range vdepth)] 0))
+             :root-list (followpath [path ALL] :db/id vdepth @errthin)}))))
+
+
+#_(dispatch [::state-from-conn])
+
+(register-handler 
+ ::init-state
+ (fn [db]
+   (merge db {::depth 0})))
+
+(dispatch [::init-state])
+
+(register-sub
+ ::depth
+ (fn [db]
+   (reaction (::depth @db))))
+
+
+(register-handler 
+ ::down
+ (fn [db]
+   (if (> 10 (::depth db))
+     (update db ::depth inc)
+      (assoc db ::depth 0))))
+
+
+(register-handler
+ ::up
+ (fn [db]
+   (if (< 0 (::depth db))
+     (update db ::depth dec)
+     db)))
+
+
+
+(key/bind! "ctrl-j" ::down  #(dispatch [::down]))
+(key/bind! "ctrl-k" ::down  #(dispatch [::up]))
+
 
 
 (defn outline []
   (let [results (subscribe [::text-nodes])
+        depth  (subscribe [::depth])
         search  (subscribe [::search])]
     (fn []
-      [:div.outline
-       (doall (for [[id text] @results
-                    :when (re-find (ido-regex @search)
-                                   text)]
-                [:button
-                 (pr-str text)]))
-       #_(for [r  @results]
-         [:div.box r])])))
+      (let [r (filter (fn [[_ t]]
+                        (re-find
+                         (ido-regex @search)
+                         t)) @results)]
+
+        [:div.outline
+         (doall (for [[pos [id text]] (map-indexed vector r)
+                      :while (> 20 pos)]
+           [:button.node
+            (if (= pos @depth)
+              {:class "active"})
+            (pr-str text @depth
+                    pos)]))
+  #_(for [r  @results]
+      [:div.box r])]))))
 
 
 

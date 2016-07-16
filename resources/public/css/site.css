@@ -499,9 +499,9 @@ background-color: green;
     grid-row-gap: 10px;
     grid-template-columns: 10px 2fr 2fr 2fr 10px;
     grid-template-areas:  ".. search search search search "
-                              ".. ..  note  note .."
                               ".. outline  note  note .."
-                              ".. ..  note  note .."
+                              ".. outline  note  note .."
+                              ".. outline  note  note .."
                               ".. footer footer footer ..";
 }
 
@@ -533,8 +533,15 @@ background-color: green;
     grid-area: outline;
     display: grid;
     background-color: #474747;
-    grid-template-rows: repeat(10, [row] 3em);
-    grid-row-gap: 5px;
-    overflow: scroll;
+    grid-template-rows: repeat(10, [row] 10%);
     height: 500px;
+    overflow: hidden;
+}
+
+.outline .node {
+    grid-row: auto / span 1;
+}
+
+.outline .active {
+    background-color:  blue;
 }
