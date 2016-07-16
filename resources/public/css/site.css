@@ -533,13 +533,18 @@ background-color: green;
     grid-area: outline;
     display: grid;
     background-color: #474747;
-    grid-template-rows: repeat(10, [row] 10%);
+    grid-template-rows: repeat(11, [row] 9.1%);
     height: 500px;
     overflow: hidden;
 }
 
 .outline .node {
     grid-row: auto / span 1;
+    padding: 5px;
+    border: 1px solid white;
+    display: flex;
+    overflow: hidden;
+    color: white;
 }
 
 .outline .active {

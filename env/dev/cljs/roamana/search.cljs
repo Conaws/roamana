@@ -576,7 +576,9 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 (register-handler 
  ::init-state
  (fn [db]
-   (merge db {::depth 0})))
+   (merge db {::depth 0
+              ::search  ""
+              ::ds conn})))
 
 (dispatch [::init-state])
 
@@ -607,27 +609,50 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 (key/bind! "ctrl-k" ::down  #(dispatch [::up]))
 
 
+(register-sub
+ ::r
+ (fn [_ _ [results search]]
+   (reaction (filter (fn [[_ t]]
+                       (re-find
+                        (ido-regex search)
+                        t)) results))))
+
+
+(register-sub
+ ::results
+ (fn [_]
+   (let [texts (subscribe [::text-nodes])
+         search (subscribe [::search])]
+     (reaction (filter (fn [[_ t]]
+                         (re-find
+                          (ido-regex @search)
+                          t)) @texts)))))
+
+
+(subscribe [::results])
+
+
+#_(subscribe [::r] [(subscribe [::text-nodes])
+                 (subscribe [::search])])
+
 
 (defn outline []
   (let [results (subscribe [::text-nodes])
         depth  (subscribe [::depth])
-        search  (subscribe [::search])]
+        search  (subscribe [::search])
+        tesst (subscribe [::results])
+        r (subscribe [::r] [results search])]
     (fn []
-      (let [r (filter (fn [[_ t]]
-                        (re-find
-                         (ido-regex @search)
-                         t)) @results)]
-
         [:div.outline
-         (doall (for [[pos [id text]] (map-indexed vector r)
+         (doall (for [[pos [id text]] (map-indexed vector @tesst)
                       :while (> 20 pos)]
-           [:button.node
+           [:div.node
             (if (= pos @depth)
               {:class "active"})
             (pr-str text @depth
                     pos)]))
   #_(for [r  @results]
-      [:div.box r])]))))
+      [:div.box r])])))
 
 
 
