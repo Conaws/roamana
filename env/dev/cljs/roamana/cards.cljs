@@ -8,6 +8,7 @@
             [roamana.storage1]
             [roamana.gridview]
             [roamana.popover]
+            [roamana.search]
             [roamana.complete]
             [roamana.video]
             [reagent.session :as session]

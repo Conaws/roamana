@@ -491,3 +491,30 @@ background-color: green;
     flex: 0.2 0.2 5px;
 }
 
+.grid-frame {
+    display: grid;
+    grid-column-gap: 2em;
+    border: 2px solid white;
+    background-color: #979797;
+    grid-row-gap: 10px;
+    grid-template-columns: 10px 2fr 2fr 2fr 10px;
+    grid-template-areas:  ".. search search search search "
+                              ".. outline  outline  note .."
+                              ".. footer footer footer ..";
+}
+
+
+.search  {
+    grid-area: search;
+    background-color: black;
+    border-radius: 5px;
+    display: flex;
+    height: 40px;
+    align-items: center;
+
+}
+
+.search input {
+    flex: 1 1 90%;
+}
+
