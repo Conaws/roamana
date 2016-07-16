@@ -32,6 +32,11 @@
 
 ;(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
 
+
+(cljs.reader/register-tag-parser!  "datascript/DB"  datascript.db/db-from-reader)
+
+(cljs.reader/register-tag-parser!  "datascript/Datom"  datascript.db/datom-from-reader)
+
 (enable-console-print!)
 
 (def schema {:node/children {:db/valueType :db.type/ref
@@ -59,6 +64,10 @@
          (js/localStorage.setItem kstr))))
 
 
+
+
+
+
 (defn save-app-to [k db]
   (->> (transform [:ds] #(pr-str @%) db)
        pr-str
@@ -72,6 +81,9 @@
 
 
 
+
+
+
 (def default-transaction [{:db/id 0 :node/type :root :node/children #{1 2}}
                           {:db/id 1 :node/type :text :node/text "Main 1"  
                            :node/children #{3}} 
@@ -82,6 +94,8 @@
                           {:db/id 4 :node/type :text :node/text "Child 1: Grandkid 1"
                            :node/children #{5}}
                           {:db/id 5 :node/type :text :node/text "Grandkid 1 : Great 1"}] )
+
+
 
 
 
@@ -105,11 +119,6 @@
 
 
 
-
-(cljs.reader/register-tag-parser!  "datascript/DB"  datascript.db/db-from-reader)
-
-(cljs.reader/register-tag-parser!  "datascript/Datom"  datascript.db/datom-from-reader)
-
 ;; replace this with something that saves the whole state
 
 
@@ -126,19 +135,23 @@
      cljs.reader/read-string)
 
 
+(register-handler
+ ::clear-db
+ (fn [_]
+   (d/transact! conn default-transaction)
+   {:ds conn}))
 
 
 
 
-(if-let [db (load! "app-db")]
-  (->>  db
+(if-let [db (load! "app-db")]  
+  (->> db
    cljs.reader/read-string
    :ds
    cljs.reader/read-string
    (d/reset-conn! conn))
-  (d/transact! conn default-transaction))
+  (dispatch [::clear-db]))
   
-
 
 
 
@@ -170,63 +183,7 @@
 
 
 
-(defn toStorage
-  "Puts db into localStorage"
-  ([k] (partial toStorage k))
-  ([k conn ]
-   (.setItem js/localStorage k
-     (-> conn pr-str))
-   conn))  
-
-
-(defn ds-to-storage [db]
-  (-> (update db :ds pr-str)
-      toStorage))
-
-
-(defn fromStorage  [k]
-  (.getItem js/localStorage k))
-
-
-
-
-
-
-
-
-
-
-(defn save-ds [db]
-  (let [ds (:ds db)]
-    (toStorage "ds" (pr-str @ds))
-    db))
-
-
-#_(register-handler 
- ::save
- (fn [db]
-   (save-ds db)))
-
-
-
-
-
-
-
-#_(register-handler
- ::load
- (fn [db]
-   (let [old-ds (fromStorage "ds")
-         ds  (cljs.reader/read-string old-ds)
-         r  (d/reset-conn! (:ds db) ds)]
-     db)))
-
-
-
-
-
-
-;(type conn)
+  
 
 
 
@@ -240,10 +197,41 @@
 
 
 
-#_(defn save-load [{:keys [save load]}]
-  (key/bind! save  ::save-k #(dispatch [::save]))
-  (key/bind! load ::load-k #(dispatch [::load]))
-)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -305,7 +293,6 @@
 (declare tree->lists)
 
 (declare followpath)
-
 
 
 
@@ -865,30 +852,15 @@
 
 
 
-(defn reset-test []
-  (let  [conn (subscribe [::conn])
-         es (posh/q  @conn '[:find ?e 
-                             :where [?e ?a ?v]])]
-    (fn [conn]
-      [:div.wrapper18
-       [:button {:on-click
-                 #(d/reset-conn! conn (fromStorage "conn"))}
-        "reset"]
-       (for [e @es]
-         [:div.box18 (pr-str e)])])))
-
-
-(defcard-rg crazy2
-  "ghhh"
-  [reset-test conn])
 
 
 
 
-#_(defn transact-and-store! 
-([txt]  (transact-and-store! conn txt))
-([con txn]
-  (->> txn (d/transact! con) :db-after !>ls)))
+
+
+
+
+
 
 
 
