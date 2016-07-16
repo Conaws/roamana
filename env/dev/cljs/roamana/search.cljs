@@ -551,16 +551,22 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 
 
 
+(re-find  #".*a.*b.*c.*" "abadb")
 
-(def search-query
- (fn [db]
-   (let [text-nodes (subscribe [::text-nodes])
-         q (::search @db "")]
-     (reaction
-      (fn [] (select-one 
-              [(sp/selected? [ALL LAST #(clojure.string/includes? % q)])] @text-nodes))))))
+(defn ido-regex [s] 
+  (js/RegExp. 
+   (apply str  
+          (concat 
+           (interleave 
+            (repeat ".*") 
+            (interleave (repeat "(")
+                 (clojure.string/split s "")
+                 (repeat ")")))  ".*") ) "i"))
 
 
+
+
+(re-find  (ido-regex "abcd") "ghbhdblkjClkjhlkd" )
 
 
 (defn outline []
@@ -569,7 +575,8 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
     (fn []
       [:div (area "outline")
        (doall (for [[id text] @results
-                    :when (clojure.string/includes? text @search)]
+                    :when (re-find (ido-regex @search)
+                                   text)]
                 [:div.box
                  (pr-str text)]))
        #_(for [r  @results]
