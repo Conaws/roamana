@@ -531,7 +531,7 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
   (let [s (subscribe [::search])]
     (fn []
       [:div.search
-       [:input
+       [:input#search
         {:value @s
          :on-change  #(dispatch [::assoc ::search (->
                                                    %
@@ -559,21 +559,25 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
           (concat 
            (interleave 
             (repeat ".*") 
-            (interleave (repeat "(")
-                 (clojure.string/split s "")
-                 (repeat ")")))  ".*") ) "i"))
+            (map (partial apply str)
+                 (partition 3                            
+                            (interleave (repeat "(")
+                                        (clojure.string/split s "")
+                                        (repeat ")")))))  ".*") ) "i"))
+
+(map (partial  apply str) (partition 3 (interleave (repeat "(")
+                                 (clojure.string/split "abc" "")
+                                 (repeat ")"))))
 
 
-
-
-(re-find  (ido-regex "abcd") "ghbhdblkjClkjhlkd" )
+(re-find  (ido-regex "abcd") "AghbhdblkjClkjhlkd" )
 
 
 (defn outline []
   (let [results (subscribe [::text-nodes])
         search  (subscribe [::search])]
     (fn []
-      [:div (area "outline")
+      [:div.outline
        (doall (for [[id text] @results
                     :when (re-find (ido-regex @search)
                                    text)]
@@ -589,17 +593,31 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
     [:div.grid-frame
      [search]
      [outline]
-     [:div.box (area "note")
-      lorem]
+     [:div.note
+      [:textarea#note ]]
      [:div (area "footer")
       :aa]
      ]))
-
 
 (defcard-rg frame
   [grid-frame])
 
 
+(.getElementById js/document "search")
 
 
+
+(defn move-focus [id e]
+  (let [el (.getElementById js/document id)]
+    (.preventDefault e)
+    (js/console.log e)
+    (.focus el)))
+
+
+
+
+(key/bind! "ctrl-l" ::focus-search #(move-focus "search" %))
+(key/bind! "ctrl-n" ::focus-search #(move-focus "note" %))
+
+(key/bind! "tab" ::focus-search #(move-focus "note" %))
 

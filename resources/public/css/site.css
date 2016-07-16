@@ -518,3 +518,18 @@ background-color: green;
     flex: 1 1 90%;
 }
 
+.note {
+    grid-area: note;
+    display: flex;
+}
+
+.note textarea {
+    flex: 1 1 50%;
+}
+
+.outline {
+    grid-area: outline;
+    display: grid;
+    background-color: #474747;
+    grid-row-gap: 5px;
+}
