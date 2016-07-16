@@ -581,10 +581,17 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
        (doall (for [[id text] @results
                     :when (re-find (ido-regex @search)
                                    text)]
-                [:div.box
+                [:button
                  (pr-str text)]))
        #_(for [r  @results]
          [:div.box r])])))
+
+
+
+
+(defn resize-area []
+  (let [note (.getElementById js/document "note")]
+    (.-scrollHeight note)))
 
 
 
@@ -594,7 +601,7 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
      [search]
      [outline]
      [:div.note
-      [:textarea#note ]]
+      [:textarea#note]]
      [:div (area "footer")
       :aa]
      ]))
@@ -604,6 +611,8 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 
 
 (.getElementById js/document "search")
+
+
 
 
 

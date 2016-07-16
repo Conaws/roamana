@@ -493,13 +493,15 @@ background-color: green;
 
 .grid-frame {
     display: grid;
-    grid-column-gap: 2em;
+    grid-column-gap: 1em;
     border: 2px solid white;
     background-color: #979797;
     grid-row-gap: 10px;
     grid-template-columns: 10px 2fr 2fr 2fr 10px;
     grid-template-areas:  ".. search search search search "
-                              ".. outline  outline  note .."
+                              ".. ..  note  note .."
+                              ".. outline  note  note .."
+                              ".. ..  note  note .."
                               ".. footer footer footer ..";
 }
 
@@ -508,8 +510,8 @@ background-color: green;
     grid-area: search;
     background-color: black;
     border-radius: 5px;
+    min-height: 40px;
     display: flex;
-    height: 40px;
     align-items: center;
 
 }
@@ -524,12 +526,15 @@ background-color: green;
 }
 
 .note textarea {
-    flex: 1 1 50%;
+    flex: 1 1 100px;
 }
 
 .outline {
     grid-area: outline;
     display: grid;
     background-color: #474747;
+    grid-template-rows: repeat(10, [row] 3em);
     grid-row-gap: 5px;
+    overflow: scroll;
+    height: 500px;
 }
