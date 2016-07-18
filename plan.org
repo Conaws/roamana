@@ -12,3 +12,28 @@
          children (select [:node/children ALL :db/id] @root)
          grandchildren (map #(posh/pull conn '[:db/id {:node/children [:db/id]}] %) children)
          errthin (posh/pull conn '[:db/id {:node/children 2}] 0)]
+* database
+{:ds conn
+:: search "string"
+ ::depth 0
+
+
+}
+* subscriptions
+
+::text-nodes
+  q  [?e  :node/text ]
+
+
+::results1
+   [eid textstring] 
+        where textstring matches regex of searchstring
+*  what we need to track
+   1. what is the currently selected Entity
+   2. Where is that relative to all the currently viewed search results
+*  handlers 
+
+1.  when changing depth, should automatically change visible note
+      -- rather than resetting, depth to 0 when doing search, set to -1
+         that way, you don't change the node you're on just by doing a search
+     

@@ -10,6 +10,7 @@
             [roamana.popover]
             [roamana.search]
             [roamana.complete]
+            [roamana.svg.foreign]
             [roamana.video]
             [reagent.session :as session]
             [roamana.core :as core])

@@ -220,10 +220,18 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 
 
 
+
 (register-sub
  ::depth
  (fn [db]
    (reaction (::depth @db))))
+
+
+(def depthwatcher (subscribe [::depth]))
+
+
+(add-watch depthwatcher :watch
+           (fn [k a ]))
 
 
 (register-handler 
@@ -233,6 +241,9 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
    (if (> 20 (::depth db))
      (update db ::depth inc)
      (assoc db ::depth 0))))
+
+
+
 
 
 (register-handler
@@ -321,8 +332,21 @@ r)))
      (subscribe [::nah] [total depth]))))
 
 
+
+
+(defn fire-scroll [e]
+  (let [item (-> e .-target)]
+    (js/console.log  [item])
+    (.scrollIntoViewIfNeeded item)
+    (set! (.-scrollTop item) 5)))
+
+
+
+
+
+
 (defn outline []
-  (let [results  (subscribe [::results3])
+  (let [results  (subscribe [::results1])
         depth (subscribe [::depth])]
     (fn []
         [:div.outline
@@ -331,8 +355,10 @@ r)))
               [[pos [id text]] 
                (map-indexed vector @results)]
            [:div.node
-            (if (= pos @depth)
-              {:class "active"})
+            {:on-click #(fire-scroll %)
+             :class (if (= pos @depth)
+                      "active"
+                      "inactive")}
             (pr-str text)]))])))
 
 
@@ -372,12 +398,18 @@ r)))
 
 
 
+(defn testa []
+  (let [a (subscribe [::depth])]
+    (js/console.log @a)))
+
+
 (defn search-keys []
   (key/unbind-all!)
   (key/bind! "ctrl-l" ::focus-search #(move-focus "search" %))
   (key/bind! "ctrl-n" ::focus-search #(move-focus "note" %))
   (key/bind! "tab" ::focus-search #(move-focus "note" %))
   (key/bind! "ctrl-j" ::down  #(dispatch [::down]))
+  (key/bind! "ctrl-a" ::down  #(testa))
   (key/bind! "ctrl-k" ::down  #(dispatch [::up])))
 
 

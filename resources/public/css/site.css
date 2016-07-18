@@ -533,7 +533,7 @@ background-color: green;
     grid-area: outline;
     display: grid;
     background-color: #474747;
-    grid-template-rows: repeat(11, [row] 9.1%);
+    grid-template-rows: repeat(40, [row] 2em);
     height: 500px;
     overflow: hidden;
 }
@@ -542,9 +542,9 @@ background-color: green;
     grid-area: outline;
     display: grid;
     background-color: #474747;
-    grid-template-rows: repeat(auto, [row] 1fr);
+    grid-template-rows: repeat(10, [row] 50%);
     height: 500px;
-    overflow: hidden;
+    overflow: scroll;
 }
 
 .outline .node {
@@ -552,7 +552,7 @@ background-color: green;
     padding: 5px;
     border: 1px solid white;
     display: flex;
-    overflow: hidden;
+    overflow: scroll;
     color: white;
 }
 
