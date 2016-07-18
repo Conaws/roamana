@@ -1,4 +1,4 @@
-(ns roamana.embed
+(ns roamana.basic.gridview
   (:require [reagent.core :as reagent :refer [atom]]
             [re-frame.db :refer [app-db]]
             [re-frame.core :refer [subscribe dispatch register-handler register-sub]]

@@ -31,6 +31,9 @@
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
+;; currently not loading this on purpose
+
+
 (re-frame.utils/set-loggers! {:warn #(js/console.log "")})
 
 (def schema {:node/children {:db/valueType :db.type/ref

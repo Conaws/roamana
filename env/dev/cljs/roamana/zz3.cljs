@@ -135,34 +135,6 @@
 
 
 
-(register-sub
- ::all
- (fn [db]
-   (reaction @db)))
-
-
-(register-sub
- ::all-ents
- (fn [db]
-   (let [conn (subscribe [::conn])]
-     (posh/q @conn '[:find (pull ?e [*])
-                     :where  [?e]]))))
-
-
-(defn ents []
-  (let [es (subscribe [::all-ents])
-        all (subscribe [::all])]
-  (fn []
-    [:div 
-     #_[:div (pr-str @es)]
-     [:div (pr-str  (dissoc  @all :ds))]])))
-
-
-
-(defcard-rg ents
-  [ents])
-
-
 
 ;;root is hidden, or s at the top
 (declare tree->lists)
@@ -538,9 +510,7 @@
 
 
 
-(:root-list
-@app-db
-)
+#_(:root-list @app-db)
 
 
 (register-handler
@@ -637,72 +607,4 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-(defcard mybox
-"```
-.box18 {
-  background-color: #444;
-  color: #fff;
-  border-radius: 5px;
-  padding: 20px;
-  font-size: 150%;
-}
-
-.box18:nth-child(even) {
-  background-color: #ccc;
-  color: #000;
-}
-
-```" )
-
-
-
-
-(defcard-rg grid4
-[:div.wrapper18
- [:div {:style
-        {:grid-column "2 / 4"
-         :grid-row  "1 / 2" 
-         :padding 20
-         :background-color "#444"}} :a]
- [:div {:style
-        {:grid-column "2 / 4"
-         :grid-row  "4 / 50" 
-         :padding 20
-         :background-color "#ccc"}} :a]])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

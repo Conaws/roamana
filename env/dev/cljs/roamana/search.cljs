@@ -72,38 +72,7 @@
 
 
 
-(register-sub
- ::all
- (fn [db]
-   (reaction @db)))
 
-
-
-(register-sub
- ::all-ents
- (fn [db]
-   (let [conn (subscribe [::conn])]
-     (posh/q @conn '[:find (pull ?e [*])
-                     :where  [?e]]))))
-
-
-(defn ents []
-  (let [es (subscribe [::all-ents])]
-  (fn []
-    [:div 
-     [:div (pr-str @es)]])))
-
-
-
-(defn all []
-  (let [es (subscribe [::all])]
-  (fn []
-    [:div 
-     [:div (pr-str @es)]])))
-
-
-(defcard-rg all
-  [all])
 
 (defpathedfn repeat-path [walk-path end-path i]
   (if (= 0 i)
@@ -227,11 +196,10 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
    (reaction (::depth @db))))
 
 
-(def depthwatcher (subscribe [::depth]))
 
 
-(add-watch depthwatcher :watch
-           (fn [k a ]))
+
+
 
 
 (register-handler 
