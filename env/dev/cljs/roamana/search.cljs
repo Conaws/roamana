@@ -17,10 +17,12 @@
             [keybind.core :as key]
             [clojure.set   :as set]
             [cljs.spec  :as s]
+           
             [roamana.zz :refer [cursify]]
             [goog.i18n.DateTimeFormat :as dtf]
             [roamana.core :as core])
   (:require-macros
+   [cljs.test  :refer [testing is]]
    [com.rpl.specter.macros  :refer [select select-one
                                     setval defnav 
                                     defpathedfn
@@ -52,7 +54,23 @@
                  ratom?
                  #(s/valid? ::ds @%)))
 
-
+(deftest cljs-test-integration
+  "## Here are some example tests"
+  (testing "testing context 1"
+    (is (= (+ 3 4 55555) 4) "This is the message arg to an 'is' test")
+    (is (= (+ 1 0 0 0) 1) "This should work")
+    (is (= 1 3))
+    (is false)
+    (is (throw "errors get an extra red line on the side")))
+   "Top level strings are interpreted as markdown for inline documentation."
+  (testing "testing context 2"
+    (is (= (+ 1 0 0 0) 1))        
+    (is (= (+ 3 4 55555) 4))
+    (is false)
+  (testing "nested context"
+    (is (= (+ 1 0 0 0) 1))        
+    (is (= (+ 3 4 55555) 4))
+    (is false))))
 
 
 (register-sub
@@ -331,13 +349,15 @@ r)))
 
 
 
-(defcard-rg outline
-  [outline])
+#_(defcard-rg outline
+  [outline]
+  )
 
 
 #_(defn resize-area []
   (let [note (.getElementById js/document "note")]
     (.-scrollHeight note)))
+
 
 
 
