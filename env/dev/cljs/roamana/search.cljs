@@ -1,5 +1,6 @@
 (ns roamana.search
   (:require [reagent.core :as reagent :refer [atom]]
+            [reagent.ratom :refer [make-reaction]]
             [re-frame.db :refer [app-db]]
             [re-frame.core :refer [subscribe dispatch register-handler register-sub]]
             [posh.core :refer [posh!] :as posh]
@@ -16,8 +17,9 @@
             [reagent.session :as session]
             [keybind.core :as key]
             [clojure.set   :as set]
+            [clojure.test.check.generators]
             [cljs.spec  :as s]
-           
+            [cljs.spec.impl.gen :as gen]
             [roamana.zz :refer [cursify]]
             [goog.i18n.DateTimeFormat :as dtf]
             [roamana.core :as core])
@@ -35,8 +37,6 @@
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
-;(re-frame.utils/set-loggers! {:warn #(js/console.log "")})
-
 
 (def ds-db? #(instance? datascript.db/DB %))
 
@@ -52,9 +52,9 @@
 
 (s/def ::app-db (s/and 
                  ratom?
-                 #(s/valid? ::ds @%)))
+                 #(s/valid? ::ds @(:ds @%))))
 
-(deftest cljs-test-integration
+#_(deftest cljs-test-integration1
   "## Here are some example tests"
   (testing "testing context 1"
     (is (= (+ 3 4 55555) 4) "This is the message arg to an 'is' test")
@@ -74,37 +74,6 @@
 
 
 (register-sub
- ::conn
- (fn [db]
-   (reaction (:ds @db))))
-
-
-
-(register-handler
- ::transact
- (fn [db [_ transaction & {:keys [ds-id] :or {ds-id :ds}}]]
-   (let [conn (get db ds-id)]
-     (d/transact! conn transaction)
-     db)))
-
-
-
-
-
-
-(defpathedfn repeat-path [walk-path end-path i]
-  (if (= 0 i)
-    end-path
-    [walk-path (repeat-path walk-path end-path (dec i))]))
-
-
-
-(defn followpath [walkpath endpath depth tree]
-  (vec  (for [i (range depth)] 
-        (vec (set (select (repeat-path walkpath endpath i) tree))))))
-
-
-(register-sub
  ::key
  (fn [db [_ k]]
    (reaction (get @db k))))
@@ -117,7 +86,6 @@
    (assoc db k v)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def lorem 
 
 "lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnoj
@@ -183,6 +151,44 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
                                         (repeat ")")))))  ".*") ) "i"))
 
 
+(s/def ::eid integer?)
+(s/def ::search-result (s/cat :id ::eid :name string?))
+(s/def ::results (s/* 
+                  (s/spec
+                   ::search-result)))
+
+
+;(s/exercise ::search-results)
+
+;(s/explain ::search-result [1 "3"])
+
+(s/explain ::results  [[1 "3"]])
+
+(s/exercise (s/cat :k keyword? :ns (s/+ number?)) 5)
+
+
+
+
+(deftest searchtests
+  "## Here are some example tests"
+  (testing "search"
+    (let  [search (subscribe [::search])
+           text-nodes (subscribe [::text-nodes])
+           search-results (subscribe [::results1])
+           depth  (subscribe [::depth])]
+      (is (string? @search))
+      (is (set?  @text-nodes))
+      (is (s/valid?  ::results @search-results))
+      (is (s/valid? integer? @(subscribe 
+                               [::active-entity]
+                                [depth search-results])))))
+  
+   "Top level strings are interpreted as markdown for inline documentation."
+  (testing "testing context 2"
+    (is (s/valid? ::app-db  app-db))
+    (is (s/valid? ::ds  @(:ds @app-db)))
+
+))
 
 
 #_(defcard-rg search
@@ -359,20 +365,61 @@ r)))
     (.-scrollHeight note)))
 
 
+(get [[:a :b]] 0)
+
+
+(register-sub
+ ::active-entity
+ (fn [] 
+   (let
+       [d  (subscribe [::depth]) 
+        r  (subscribe [::results1])]
+     (reaction  (get (select [ALL sp/FIRST] @r) @d 0)))))
+
+
+
+(register-sub
+ ::apull
+ (fn [db _ [eid]]
+   (let [conn (:ds @db)]
+     (posh/pull conn '[*] eid))))
+
+
+
+
+
+
+
+(register-handler
+ ::transact
+ (fn [db [_ transaction & {:keys [ds-id] :or {ds-id :ds}}]]
+   (let [conn (get db ds-id)]
+     (d/transact! conn transaction)
+     db)))
 
 
 (defn grid-frame []
-  (fn []
-    [:div.grid-frame
-     [search]
-     [outline]
-     [:div.note
-      [:textarea#note]]
-     [:div (area "footer")
-      :aa]
-     ]))
+  (let [d (subscribe [::active-entity])
+        dv (subscribe [::apull][d])]
+    (fn []
+      [:div.grid-frame
+       [search]
+       [outline]
+       [:div.note
+        [:h1 (pr-str @d)]
+        [:h4  (pr-str @dv)]
+        [:textarea#note
+         {:value (:node/body @dv "")
+          :on-change #(dispatch [::transact [{:db/id @d :node/body 
+                                              (-> % .-target .-value)
 
-(defcard-rg framer
+}]])}
+         ]]
+       [:div (area "footer")
+        :aa]
+       ])))
+
+(defcard-rg frame
   [grid-frame])
 
 
