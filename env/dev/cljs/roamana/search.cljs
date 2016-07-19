@@ -1,5 +1,5 @@
 (ns roamana.search
-  (:require [reagent.core :as reagent :refer [atom]]
+  (:require [reagent.core :as r :refer [atom]]
             [reagent.ratom :refer [make-reaction]]
             [re-frame.db :refer [app-db]]
             [re-frame.core :refer [subscribe dispatch register-handler register-sub]]
@@ -229,12 +229,18 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
 (register-handler 
  ::down
  (fn [db]
-;   (js/alert "down")
-   (if (> 20 (::depth db))
-     (update db ::depth inc)
-     (assoc db ::depth 0))))
+   (let [results @(subscribe [::results1])]
+     (if (> (count results) (::depth db))
+       (update db ::depth inc)
+       (assoc db ::depth 0)))))
 
 
+
+
+(deftest depthtest
+  (testing "handlersubscriptions"
+    (is (s/valid? integer?  (count @(subscribe [::results1])))))
+)
 
 
 
@@ -330,7 +336,7 @@ r)))
   (let [item (-> e .-target)]
     (js/console.log  [item])
     (.scrollIntoViewIfNeeded item)
-    (set! (.-scrollTop item) 5)))
+    (set! (.-scrollTop item) 50)))
 
 
 
@@ -346,12 +352,14 @@ r)))
           (for 
               [[pos [id text]] 
                (map-indexed vector @results)]
-           [:div.node
-            {:on-click #(fire-scroll %)
-             :class (if (= pos @depth)
-                      "active"
-                      "inactive")}
-            (pr-str text)]))])))
+           ^{:key id} [:div.node
+               {:on-click
+                #(fire-scroll %)
+                :on-change #(js/console.log %)
+                :class (if (= pos @depth)
+                         "active"
+                         "inactive")}
+               (pr-str text)]))])))
 
 
 
@@ -398,7 +406,7 @@ r)))
      db)))
 
 
-(defn grid-frame []
+(defn grid-frame0 []
   (let [d (subscribe [::active-entity])
         dv (subscribe [::apull][d])]
     (fn []
@@ -406,8 +414,6 @@ r)))
        [search]
        [outline]
        [:div.note
-        [:h1 (pr-str @d)]
-        [:h4  (pr-str @dv)]
         [:textarea#note
          {:value (:node/body @dv "")
           :on-change #(dispatch [::transact [{:db/id @d :node/body 
@@ -420,7 +426,7 @@ r)))
        ])))
 
 (defcard-rg frame
-  [grid-frame])
+  [grid-frame0])
 
 
 
@@ -455,3 +461,55 @@ r)))
    :keys]
   )
 (search-keys)
+
+
+
+(defn Viewable [props]
+  (r/create-class {:displayName "Viewable"
+                   :component-did-mount
+                   (fn [component]
+                     (.scrollIntoViewIfNeeded (r/dom-node component)))
+                   :reagent-render (fn [props]
+                                     [:button props])}))
+
+(defn outline1 []
+  (let [results  (subscribe [::results1])
+        depth (subscribe [::depth])]
+    (fn []
+        [:div.outline
+         (doall 
+          (for 
+              [[pos [id text]] 
+               (map-indexed vector @results)]
+           (if (= pos @depth)
+             [Viewable (pr-str text)]
+             ^{:key id}[:div.node
+                        {:on-click
+                         #(fire-scroll %)
+                         :class (if (= pos @depth)
+                                  "active"
+                                  "inactive")}
+                        (pr-str text)])))])))
+
+
+(defn grid-frame []
+  (let [d (subscribe [::active-entity])
+        dv (subscribe [::apull][d])]
+    (fn []
+      [:div.grid-frame
+       [search]
+       [outline1]
+       [:div.note
+        [:textarea#note
+         {:value (:node/body @dv "")
+          :on-change #(dispatch [::transact [{:db/id @d :node/body 
+                                              (-> % .-target .-value)
+
+}]])}
+         ]]
+       [:div (area "footer")
+        :aa]
+       ])))
+
+(defcard-rg grid2
+  [grid-frame])

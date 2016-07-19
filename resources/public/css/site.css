@@ -562,20 +562,12 @@ background-color: green;
     flex: 1 1 100px;
 }
 
-.outline0 {
-    grid-area: outline;
-    display: grid;
-    background-color: #474747;
-    grid-template-rows: repeat(40, [row] 2em);
-    height: 500px;
-    overflow: hidden;
-}
 
 .outline {
     grid-area: outline;
     display: grid;
     background-color: #474747;
-    grid-template-rows: repeat(10, [row] 50%);
+    grid-template-rows: repeat(10, [row] 20%);
     height: 500px;
     overflow: scroll;
 }
