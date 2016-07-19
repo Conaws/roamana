@@ -106,14 +106,23 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
    (reaction (::search @db))))
 
 
-
+(declare move-focus)
 
 (defn search []
-  (let [s (subscribe [::search])]
+  (let [s (subscribe [::search])
+        d (subscribe [::depth])]
     (fn []
       [:div.search
        [:input#search
         {:value @s
+         :on-key-press #(if (= (.-charCode %) 13)
+                         (do
+                           
+                           #_(js/alert [@d @s])
+                           (if (= 0 @d)
+                             (dispatch [::transact [{:db/id -1
+                                                     :node/text @s}]]))
+                           (move-focus "note" %)))
          :on-change  #(do
                         (dispatch [::assoc ::depth 0])
                         (dispatch [::assoc ::search (->
@@ -425,7 +434,7 @@ r)))
         :aa]
        ])))
 
-(defcard-rg frame
+#_(defcard-rg frame
   [grid-frame0])
 
 
