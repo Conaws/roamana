@@ -10,6 +10,7 @@
                  [reagent-forms "0.5.24"]
                  [reagent-utils "0.1.8"]
                  [re-frame      "0.7.0"]
+                 [com.lucasbradstreet/instaparse-cljs "1.4.1.2"] 
                  [datascript                           "0.15.0"]
                  [datascript-transit   "0.2.0"]
                  [ring "1.5.0"]
@@ -21,7 +22,7 @@
                  [cljsjs/rangy-textrange        "1.3.0-1"]
                  [cljsjs/rangy-core             "1.3.0-1"]
                  [re-complete                "0.1.4-1-SNAPSHOT"]
-                 [alandipert/storage-atom               "2.0.1"]
+              ;   [alandipert/storage-atom               "2.0.1"]
                  [hiccup "1.0.5"]
                  [yogthos/config "0.8"]
                  [org.clojure/clojurescript "1.9.36"

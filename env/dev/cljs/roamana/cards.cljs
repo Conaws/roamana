@@ -8,6 +8,7 @@
             [roamana.basic.gridview]
             [roamana.popover]
             [roamana.search]
+            [roamana.links]
             [roamana.video]
             [roamana.basic.kanban]
             [roamana.basic.multiembed]

@@ -6,7 +6,6 @@
             [datascript.core :as d]
             [posh.core       :as posh  :refer [pull posh! q transact!]]
             [cljs.pprint     :refer [pprint]]
-            [alandipert.storage-atom :refer [local-storage]]
             [cljs.reader]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       stay-then-continue 
