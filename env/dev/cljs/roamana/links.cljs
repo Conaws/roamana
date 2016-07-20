@@ -31,14 +31,60 @@
 (defmacro mk [arg] `(dc/mkdn-pprint-source ~arg))
 
 
-(def teststring "this is a test]] of an [[nvalt]] [[:note]][[link to another note]] with an [[incomplete link and a [[link that is mid edit ]]")
+(def teststring "this is a test]] of an [[nvalt]] [[:note]] [[link to another note]] with an [[incomplete link and a [[link that is mid edit ]]")
 
 
 (def link-regex #"(?:\[\[)([^\[\]]+\S)\]\]") 
 
 (s/def ::regex #(= (type %) js/RegExp))
+
+
+
 (s/def ::link (s/and string?  #(re-matches link-regex %)))
 
+(s/def ::unparsed-link-vec (s/cat :outermatch ::link
+                                  :inner  string?))
+(s/def ::unparsed-links (s/* (s/spec ::unparsed-link-vec)))
+
+
+
+(deftest cccab
+  (testing "indexOf"
+    (let [links (re-seq link-regex teststring)]
+      (is (s/valid? ::unparsed-links links))
+      (is (= 4  (str/index-of "abcde" "e")))
+      (is (= "abcd" (subs "abcdefg" 0 4))))))
+
+
+
+(defn  linkparse [returnvec compared-link-vec]
+  (let [target (last returnvec)
+        [matcher returnval] compared-link-vec
+        matchlength (count matcher)
+        matchloc  (str/index-of target matcher)]
+    (assert (s/valid? ::link matcher))
+    (assert (s/valid? integer? matchlength))
+    (conj (vec (butlast returnvec)) 
+          (subs target 0 matchloc)
+          [:a matcher] 
+          (subs target 
+                (+ matchloc matchlength)))))
+
+
+(defn tet [] 
+  (let [links (re-seq link-regex teststring)]
+    (assert (s/valid? ::unparsed-links links))
+    (reduce linkparse 
+            [:div teststring] links) ))
+
+
+(defcard-rg firstembed
+  [tet])
+
+(s/fdef linkparse :args (s/cat
+                         :returnvector (s/and vector? #(-> (last %)
+                                                           string?))
+                           :links ::unparsed-links ))
 
 
 
@@ -51,7 +97,6 @@
     (is (not (s/valid? ::link "[[this is an incomplete ]]")))
     (is (not (s/valid? ::link "[[this is definintely not a note")))
     (is  (= "aa" (re-matches #"aa" "aa")))))
-
 
 
 
@@ -142,3 +187,38 @@
 (defcard-rg link2
   [:div
    (embed-link2 link-regex teststring)])
+
+
+
+
+(def ttransforms
+  {"a\\S+" (fn [x] [:a (count x)])
+   "b\\S+" (fn [x] [:b (clojure.string/upper-case x)])
+   "c\\S+" (fn [x] [:c "hahaha"])})
+
+
+
+
+;; do some whacky stuff...
+(defn ttransform [s transforms]
+  (let [ks (keys transforms)
+;; put all the patterns into one big regex or of groups (aaa)|(bbbb)|(cccc)
+        p (re-pattern (str "(" (clojure.string/join ")|(" ks) ")"))
+;; split the string to get the unmatched parts
+        [before & more] (clojure.string/split s p)]
+    (into
+      [:div before]
+;; interleave the splits and replacements...
+;; 1 more unmatched because splits  a,b,c  2 commas 3 letters
+      (interleave
+        (for [[match & groups] (re-seq p s)]
+;; re-seq is riddiculous, it returns a sequence of the match+groups...
+;; where groups contains the ()()() group matches...
+;; in our case we are doing an or, so only one of the groups will be non-nil,
+;; so we find the index of the non-nil match, that's the pattern we
+;want to use to replace with
+;; look up the replacement function
+          ((transforms (nth ks (count (take-while nil? groups)))) match))
+        more))))
+
+(ttransform "aaa bbbb cccc defdgd " ttransforms)
