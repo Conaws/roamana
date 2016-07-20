@@ -567,7 +567,7 @@ background-color: green;
     grid-area: outline;
     display: grid;
     background-color: #474747;
-    grid-template-rows: repeat(10, [row] 20%);
+    grid-template-rows: repeat(100, [row] 20%);
     height: 500px;
     overflow: scroll;
 }

@@ -119,12 +119,12 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
                          (do
                            
                            #_(js/alert [@d @s])
-                           (if (= 0 @d)
+                           (if (= -1 @d)
                              (dispatch [::transact [{:db/id -1
                                                      :node/text @s}]]))
                            (move-focus "note" %)))
          :on-change  #(do
-                        (dispatch [::assoc ::depth 0])
+                        (dispatch [::assoc ::depth -1])
                         (dispatch [::assoc ::search (->
                                                        %
                                                        .-target
@@ -239,9 +239,9 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
  ::down
  (fn [db]
    (let [results @(subscribe [::results1])]
-     (if (> (count results) (::depth db))
-       (update db ::depth inc)
-       (assoc db ::depth 0)))))
+     (if (> (count results) (inc (::depth db)))
+       (do (move-focus "note")
+         (update db ::depth inc))))))
 
 
 
@@ -258,8 +258,13 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
  (fn [db]
  ;  (js/alert "down")
    (if (< 0 (::depth db))
-     (update db ::depth dec)
-     db)))
+     (do(move-focus "note")
+        (update db ::depth dec))
+     (if (= 0 (::depth db)) 
+       (do (move-focus "search")
+           ;(js/alert "hey")
+           (update db ::depth dec))
+       db))))
 
 
 
@@ -434,16 +439,18 @@ r)))
         :aa]
        ])))
 
-#_(defcard-rg frame
+(defcard-rg frame
   [grid-frame0])
 
 
 
-(defn move-focus [id e]
-  (let [el (.getElementById js/document id)]
-    (.preventDefault e)
-    (js/console.log e)
-    (.focus el)))
+(defn move-focus 
+  ([id] (let [el (.getElementById js/document id)]
+          (.focus el)))
+  ([id e]
+   (let [el (.getElementById js/document id)]
+     (.preventDefault e)
+     (.focus el))))
 
 
 
@@ -486,6 +493,10 @@ r)))
         depth (subscribe [::depth])]
     (fn []
         [:div.outline
+         {:style {:display "grid" 
+                  :grid-template-rows (str "repeat("
+                                            (count @results)
+                                            ", [row] 15%)")}}
          (doall 
           (for 
               [[pos [id text]] 
@@ -494,10 +505,10 @@ r)))
              [Viewable (pr-str text)]
              ^{:key id}[:div.node
                         {:on-click
-                         #(fire-scroll %)
-                         :class (if (= pos @depth)
-                                  "active"
-                                  "inactive")}
+                         #(do 
+                            (move-focus "note")
+                            (dispatch [::assoc ::depth pos]))
+                         }
                         (pr-str text)])))])))
 
 

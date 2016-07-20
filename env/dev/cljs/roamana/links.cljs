@@ -34,57 +34,28 @@
 (def teststring "this is a test]] of an [[nvalt]] [[:note]][[link to another note]] with an [[incomplete link and a [[link that is mid edit ]]")
 
 
-(def valid-link-regex0 #"\[\[((\w+(?:\s\w+)?)+)\]\]")
-
-(def valid-link-regex #"\[\[([^\[]+)\]\]")
-
-(def valid-link-regex2 #"\[\[([\w\s]+)\]\]")
-
-(def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$")
-(s/def ::email-type (s/and string? #(re-matches email-regex %)))
-
+(def link-regex #"(?:\[\[)([^\[\]]+\S)\]\]") 
 
 (s/def ::regex #(= (type %) js/RegExp))
-
-(s/def ::link-type (s/and string?  #(re-matches valid-link-regex %)))
-
-(str/split teststring valid-link-regex2)
+(s/def ::link (s/and string?  #(re-matches link-regex %)))
 
 
 
-#_(->>  (insta/parse  (insta/parser "
-               text =  (link / link-vals)+
-               link = '[[' link-vals ']]' 
-               <w>  =  #'[\\s,]+'
-               link-vals  = (word | w)+
-               <word> =  #'[a-zA-Z]+'") teststring)
-
-      (insta/transform {:link-vals str}))
 
 
 
 (deftest specing
   (testing "linkparser"
-    (is (s/valid? ::regex valid-link-regex))
-    (is (s/valid? ::link-type "[[this is a note]]"))
-    (is (not (s/valid? ::link-type "[[this is an incomplete ]]")))
-    (is (not (s/valid? ::link-type "[[this is definintely not a note")))
-    (is (= "[[link to another note]]" (ffirst (re-seq valid-link-regex teststring))))
-    (is  (= "aa" (re-matches #"aa" "aa")))
-    (is (s/valid? string? teststring))))
+    (is (s/valid? ::regex link-regex))
+    (is (s/valid? ::link "[[this is a note]]"))
+    (is (not (s/valid? ::link "[[this is an incomplete ]]")))
+    (is (not (s/valid? ::link "[[this is definintely not a note")))
+    (is  (= "aa" (re-matches #"aa" "aa")))))
 
 
-(str/split "[] a b c []" "[]")
-(str/ends-with? "[] a b c []" "[]")
-
-(re-seq  #"\[\]" "[] a b c []")
-
-(s/def ::test #"(?:\[\[)(\s\S)+(?=\]\])")
-( #"(?:\[\[)(\s\S)+(?=\]\])")
 
 
-;;  this one works, but misses edge case of not ending in a space
-(re-seq #"(?:\[\[)([^\[\]]+\S)\]\]" teststring) 
+
 
 
 
@@ -105,14 +76,10 @@
 
 (s/instrument #'embed-link)
 
-(embed-link valid-link-regex teststring)
-
-(str/split teststring valid-link-regex)
-
-(def split-on-links-regex #"\[\[[^\[]+\]\]")
 
 
-(str/split teststring split-on-links-regex)
+
+
 
 
 (condp type "a"
@@ -120,15 +87,12 @@
     js/RegExp :b)
 
 
-(re-seq valid-link-regex teststring)
 
 
 
-(.toUpperCase  "a")
 
 
 
-(vector? [])
 
 (s/fdef link-generator 
         :args  (s/cat :link-title string?)
@@ -140,9 +104,8 @@
           {:bcolor "blue"}}
    link-title])
 
-#_(defcard-rg search
-  [:div
-   [search/search]])
+
+
 
 (defcard-rg links
   [:div
@@ -178,4 +141,4 @@
 
 (defcard-rg link2
   [:div
-   (embed-link2 valid-link-regex teststring)])
+   (embed-link2 link-regex teststring)])
