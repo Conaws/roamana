@@ -85,7 +85,6 @@
  (fn [db [_ k v]]
    (assoc db k v)))
 
-
 (def lorem 
 
 "lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnoj

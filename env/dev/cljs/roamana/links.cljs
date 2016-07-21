@@ -66,26 +66,129 @@
     (assert (s/valid? integer? matchlength))
     (conj (vec (butlast returnvec)) 
           (subs target 0 matchloc)
-          [:a matcher] 
-          (subs target 
+           "[[" 
+           [:a {:on-click #(dispatch [:roamana.search/assoc 
+                                      :roamana.search/search 
+                                      returnval])
+                :style {:cursor "pointer"}} 
+            returnval] 
+           "]]" 
+          
+           (subs target 
                 (+ matchloc matchlength)))))
 
 
-(defn tet [] 
+(defn embed0 [teststring] 
   (let [links (re-seq link-regex teststring)]
     (assert (s/valid? ::unparsed-links links))
     (reduce linkparse 
-            [:div teststring] links) ))
+            [:div 
+             {:content-editable "true"} teststring] links) ))
+
 
 
 (defcard-rg firstembed
-  [tet])
+  [embed0 teststring])
+
+
+
+(defn content-editable []
+  (let   [d (subscribe [:roamana.search/active-entity])
+          dv (subscribe [:roamana.search/apull][d])]
+    (fn []
+      [:div.grid-frame
+       [search/search]
+       [search/outline1]
+       [:div.note
+        [:div#note
+         {:content-editable "true"
+          :on-input #(do
+                       #_(.preventDefault %)
+                       (js/console.log (-> % .-target .-innerHTML))
+                       (dispatch [:roamana.search/transact [{:db/id @d :node/body 
+                                                             (-> % .-target .-innerHTML)
+                                                             }]]))}
+         (:node/body @dv "")
+         ]]])))
+
+
+
+
+#_(defcard-rg content-editable-disaster
+  [content-editable])
+
+
+(defn  linkparse2 [returnvec compared-link-vec]
+  (let [target (last returnvec)
+        [matcher returnval] compared-link-vec
+        matchlength (count matcher)
+        matchloc  (str/index-of target matcher)]
+    (assert (s/valid? ::link matcher))
+    (assert (s/valid? integer? matchlength))
+    (conj (vec (butlast returnvec)) 
+          (subs target 0 matchloc)
+           "[[" 
+           [:a {:on-click #(do
+                             (search/move-focus "search")
+                             (dispatch [:search/depth 0])
+                             (dispatch [:roamana.search/assoc 
+                                          :roamana.search/search 
+                                          returnval]))
+                :style {:cursor "pointer"}} 
+            returnval] 
+           "]]" 
+          
+           (subs target 
+                (+ matchloc matchlength)))))
+
+
+(defn embed [container parsestring]
+  (let [links (re-seq link-regex parsestring)]
+    (assert (s/valid? ::unparsed-links links))
+    (reduce linkparse2 
+            (conj container parsestring) links) ))
+
+
+
+(defn note []
+  (let   [d (subscribe [:roamana.search/active-entity])
+          dv (subscribe [:roamana.search/apull][d])]
+    (fn []
+      (let [text (if (<= 0 @d) (:node/body @dv "") "whatuu")]
+        [:div.grid-frame
+         [search/search]
+         [search/outline1]
+         [:div.note  {:style
+                      {:display "grid"
+                       :justify-content "stretch"
+                       :grid-template-columns "1fr 1fr"
+                       :background-color "blue"
+                       :grid-template-areas "'view view'
+                                            'edit  edit'"}}
+          (embed [:div {:style {:grid-area "view"
+                                :background-color "white"}}]
+                 text)
+          (if (>= 0 @d)
+            [:div#note]
+            [:textarea#note
+             {:value  text
+              :style {:grid-area "edit"}
+              :on-change #(do
+                            (if (< 0 @d) (dispatch [:roamana.search/transact [{:db/id @d :node/body 
+                                                                               (-> % .-target .-value)
+                                                                               }]])))}
+             ])]]))))
+
+
+
+
+(defcard-rg  notesy
+  [note])
 
 (s/fdef linkparse :args (s/cat
                          :returnvector (s/and vector? #(-> (last %)
                                                            string?))
                            :links ::unparsed-links ))
-
 
 
 
