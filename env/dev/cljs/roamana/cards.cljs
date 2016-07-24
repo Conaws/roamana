@@ -9,6 +9,8 @@
             [roamana.popover]
             [roamana.search]
             [roamana.links]
+            [roamana.debate]
+            [roamana.outline]
             [roamana.video]
             [roamana.basic.kanban]
             [roamana.basic.multiembed]
