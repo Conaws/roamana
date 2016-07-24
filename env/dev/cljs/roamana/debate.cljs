@@ -79,20 +79,11 @@
       [1 :x 2 :y]
       (setval [ALL LAST] :y [1 :x 2])))))
 
-
-
-
-
-
-
-
-
-
-(defn grid [mdb]
+(defn grid1 [mdb]
   (fn []
     [:div {:style {:display "grid"
                    :grid-template-rows "[Row-Headers] auto [A] auto [B] auto [end]"
-                   :grid-template-columns "[Column-Headers] 20px [X] auto [Y] auto [end]"
+                   :grid-template-columns "[Column-Headers] auto [X] auto [Y] auto [end]"
                    :grid-row-gap "10px"
                    :grid-column-gap "10px"
                    ;:align-items "center"
@@ -128,17 +119,170 @@
                  :justify-content "center"}}
         c])
 
-     [:div.box {:style {:grid-row "B"
-                        :grid-column "X / span 1" }}
-      "starterB"]
-     [:div.box {:style {:grid-row "A"
-                        :grid-column "Y / span 1"}}
-      "starterA"] ]))
+     (for [row (:rows @mdb)
+           column (:columns @mdb)]
+       [:button {:style {:grid-row row
+                         :grid-column column}} 
+        (str row column)])
+      ]))
+
+
+(defn row-header [row]
+  (fn [row]
+   ^{:key row} [:div
+       {:style {:grid-row row
+                :grid-column "Column-Headers"
+                :display "flex"
+                :align-items "center"
+                :justify-content "center"}}
+       row]))
+
+
+(defn column-header [c]
+  (fn [c]
+    ^{:key (str c "header")} 
+    [:div
+        {:style {:grid-row "Row-Headers"
+                 :grid-column (str c)
+                 :display "flex"
+                 :align-items "center"
+                 :justify-content "center"}}
+        c]))
+
+
+(def header-styles 
+  {:row-header  {:style
+                 {:background-color "black"
+                  :opacity "0.1"
+                  :grid-row "Row-Headers"
+                  :grid-column "Column-Headers / end"}}
+   :column-header   {:style
+                     {:background-color "green"
+                      :opacity "0.2"
+                      :grid-row "Row-Headers / end"
+                      :grid-column "Column-Headers"}}})
+
+(defn grid2 [mdb]
+  (fn [mdb]
+    [:div {:style {:display "grid"
+                   :grid-template-rows "[Row-Headers] auto [A] auto [B] auto [end]"
+                   :grid-template-columns "[Column-Headers] auto [X] auto [Y] auto [end]"
+                   :grid-row-gap "10px"
+                   :grid-column-gap "10px"
+                   ;:align-items "center"
+                   :width "500px"
+                   :height "200px"}}
+     
+     [:div (:row-header header-styles)]
+     [:div (:column-header header-styles)]
+
+     (for [row (:columns @mdb)]
+       [column-header row])
+     (for [row (:rows @mdb)]
+       [row-header row])
+   ;  [column-headers mdb]
+     (for [row (:rows @mdb)
+           column (:columns @mdb)]
+       [:button {:style {:grid-row row
+                         :grid-column column}} 
+        (str row column)])
+      ]))
+
+
+(interleave [1 2 3] [1.5 2.5])
+
+(defn make-grid-string [start end space str-vec]
+    (->> str-vec
+         (map #(str "[" % "]"))
+         (cons start)
+         vec
+         (#(conj % end))
+         (clojure.string/join space)))
+
+(def make-column (partial make-grid-string "[Column-Headers]" "[end]" " auto "))
+(def make-row (partial make-grid-string "[Row-Headers]" "[end]" " auto "))
+
+
+
+(def db2 (atom {:columns ["A" "B" "C"]
+                :rows ["X" "Y" "Zd-is-Last"]}))
+
+
+(deftest make-column-string
+  (testing "makecolumn"
+    (is (= "[Column-Headers] auto [X] auto [Y] auto [end]") 
+        (make-column ["X" "Y"]))
+    (is (= [[:A :1] [:A :2]
+            [:B :1]  [:B :2]] (for [a [:A :B]
+                                    n [:1 :2]]
+                                [a n])))))
+
+
+
+(defn grid [mdb]
+  (fn [mdb]
+    [:div {:style {:display "grid"
+                   :grid-template-rows (make-row (:rows @mdb))
+                   :grid-template-columns (make-column (:columns @mdb))
+                   :grid-row-gap "20px"
+                   :grid-column-gap "20px"
+                   ;:align-items "center"
+                   :width "500px"
+                   :height "500px"}}
+     
+     #_[:div {:style
+            {:grid-row "A"
+             :grid-column "Zed is Last"}}
+      :A]
+
+     #_[:div (:row-header header-styles)]
+     #_[:div (:column-header header-styles)]
+     ;(pr-str (type (make-column (:columns @mdb))))
+
+     (for [row (:columns @mdb)]
+       [column-header row])
+     (for [row (:rows @mdb)]
+       [row-header row])
+   ;  [column-headers mdb]
+     (for [r (:rows @mdb)
+           c (:columns @mdb)]
+       ^{:key (str r c)} [:button {:style {:grid-column c
+                                           :grid-row r}}
+           #_{:style {:grid-row (str r)
+                      :grid-column (str c " / span 1")}} 
+           (str r " " c)])
+      ]))
 
 (defcard-rg gridtest
-  [grid mdb]
-  mdb
+  [grid db2]
+  db2
   {})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (defn circle [j i id db]
 	[:circle {
