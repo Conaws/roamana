@@ -221,37 +221,43 @@
 
 (defn grid [mdb]
   (fn [mdb]
-    [:div {:style {:display "grid"
-                   :grid-template-rows (make-row (:rows @mdb))
-                   :grid-template-columns (make-column (:columns @mdb))
-                   :grid-row-gap "20px"
-                   :grid-column-gap "20px"
-                   ;:align-items "center"
-                   :width "500px"
-                   :height "500px"}}
-     
-     #_[:div {:style
-            {:grid-row "A"
-             :grid-column "Zed is Last"}}
-      :A]
+    (let [rs (:rows @mdb)
+          cls (:columns @mdb)]
+      [:div {:style {:display "grid"
+                     :grid-template-rows (make-row rs)
+                     :grid-template-columns (make-column cls)
+                     :grid-row-gap "20px"
+                     :grid-column-gap "20px"
+                                        ;:align-items "center"
+                     :width "500px"
+                     :height "500px"}}
+       (for [c cls]
+         [:button {:style
+                   {:grid-row "end"
+                    :grid-column c}}
+          :A])
+(for [r rs]
+         [:button {:style
+                   {:grid-row r
+                    :grid-column "end"}}
+          :A])
+       [:div (:row-header header-styles)]
+       [:div (:column-header header-styles)]
+                                        ;(pr-str (type (make-column (:columns @mdb))))
 
-     #_[:div (:row-header header-styles)]
-     #_[:div (:column-header header-styles)]
-     ;(pr-str (type (make-column (:columns @mdb))))
-
-     (for [row (:columns @mdb)]
-       [column-header row])
-     (for [row (:rows @mdb)]
-       [row-header row])
-   ;  [column-headers mdb]
-     (for [r (:rows @mdb)
-           c (:columns @mdb)]
-       ^{:key (str r c)} [:button {:style {:grid-column c
-                                           :grid-row r}}
-           #_{:style {:grid-row (str r)
-                      :grid-column (str c " / span 1")}} 
-           (str r " " c)])
-      ]))
+       (for [c cls]
+         [column-header c])
+       (for [row rs]
+         [row-header row])
+                                        ;  [column-headers mdb]
+       (for [r rs
+             c cls]
+         ^{:key (str r c)} [:button {:style {:grid-column c
+                                             :grid-row r}}
+                            #_{:style {:grid-row (str r)
+                                       :grid-column (str c " / span 1")}} 
+                            (str r " " c)])
+       ])))
 
 (defcard-rg gridtest
   [grid db2]
