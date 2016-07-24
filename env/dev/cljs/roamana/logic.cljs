@@ -28,81 +28,128 @@
 
 
 
-(s/def ::id (s/or :tag string? 
-                   :num integer?))
+(s/def :db/id integer?)
 
 
 (s/def ::argument-type  #{::deductive ::inductive})
 
-(s/def ::argument (s/keys
-                   :req [::id
-                         ::premises 
-                         ::conclusion]))
+;  you could have a lock, like, if this is true, no way this can be false
+;  
+;
+
+(s/def :arg/locks #{:if-true :only-if-true
+                    :if-false :only-if-false})
+
+
+(s/def :arg/impact (set (range -5 5)))
+
+(s/def ::argument 
+  (s/keys
+                   :req [:db/id
+                         :arg/premises 
+                         :arg/conclusion]
+                   :opt [:arg/lock
+                         :arg/impact
+                         :arg/impact-certainty
+                         :arg/lock-certainty
+                         :arg/impact-basis
+                         :arg/lock-basis]))
 
 
 
-(s/def ::conclusion (s/or :id  ::id 
+(s/def ::conclusion (s/or :id  :db/id 
                           :prop ::propositions))
 
-(s/def ::basis (s/coll-of ::argument []))
+(s/def :prop/basis (s/coll-of ::argument []))
 
-(s/def ::text string?)
+(s/def :prop/text string?)
 
-(s/def ::certainty (s/and integer?))
+(s/def :prop/certainty (s/and integer?))
 
 (s/def ::propositions (s/* ::proposition))
 
 
 (s/def ::proposition (s/keys
-                      :req [
-                            ::id]
-                      :opt [::text
-                            ::basis
-                            ::certainty]))
+                      :req [:db/id]
+                      :opt [:prop/text
+                            :prop/basis
+                            :prop/certainty]))
 
 
 (def propositions
-  [{::id 1
-    ::text "Donald Trump Should Never Become President"}
-   {::id 2
-    ::text "Donald Trump is a racist"}
-   {::id 3
-    ::text "Racists cannot become President"}])
+  [{:db/id 1
+    :prop/text "Donald Trump Should Never Become President"}
+   {:db/id 2
+    :prop/text "Donald Trump is a racist"}
+   {:db/id 3
+    :prop/text "Racists cannot become President"}])
+
+(def potential-premis-layouts [
+                                {2 {:neccessary-for {:true-conclusion :true
+                                                     :maybe-conclusion :not-false}
+                                    :adds-weight  {:true-conclusion :true
+                                                   :false-conclusion :false}}
+                                 3 {}}])
+
+
+(s/def ::impact-if-all-true #{:true/more
+                              :true/less
+                              :true/total
+                              :true/none})
+
+(def truth-map {0 :definitely-false
+                1 :probably-false
+                2 :likely-false
+                3 :unknown
+                4 :likely-true
+                5 :probably-true
+                6 :definitely-true})
+
+(def truth-map 
+  {0 :definitely-not
+                1 :probably-not
+                2 :likely-not
+                3 :unknown
+                4 :likely
+                5 :probably
+                6 :definitely})
 
 
 
 
 
-(s/explain ::proposition
-         {::id 1
-          ::text "Donald Trump Should Never Become President"})
+(deftest a
+  (testing "props"
+    (is (s/valid? ::propositions propositions))
+    (is (s/valid? ::proposition
+               {:db/id 1
+                :prop/text "Donald Trump Should Never Become President"}))
+    (is (s/valid? ::argument
+               {:db/id 4
+                :arg/premises #{2 3}
+                :arg/conclusion 1
+                :arg/impact 3 
+                :arg/impact-certainty 3
+                }))))
 
 
-
-(s/explain ::argument
-          {::id 4
-           ::premises {2 {:neccessary-for {:true-conclusion :true
-                                           :maybe-conclusion :not-false}
-                          :adds-weight  {:true-conclusion :true
-                                         :false-conclusion :false}}
-                       3 {}}
-           ::conclusion 1
-           ::certainty-given-true-premises 100
-           })
+(def schema {:prop/basis {:db/valueType :db.type/ref
+                          :db/cardinality :db.cardinality/many}
+             :arg/premises  {:db/valueType :db.type/ref
+                             :db/cardinality :db.cardinality/many}
+             :arg/conclusion {:db/valueType :db.type/ref
+                              :db/cardinality :db.cardinality/one}})
 
 
-(def schema {:node/children {:db/valueType :db.type/ref
-                             :db/cardinality :db.cardinality/many}})
-
-
-(defonce lconn (d/create-conn schema))
+(def lconn (d/create-conn schema))
 (posh! lconn)
 (def cc (cursify lconn))
 
 
 
-(defcard-rg ents
-  [:div "hey"]
+(defcard-rg ent
+  [:div 
+   (pr-str @lconn)]
   cc
   {:inspect-data true
    :history true
