@@ -105,7 +105,7 @@
                 5 :probably-true
                 6 :definitely-true})
 
-(def truth-map 
+(def certainty-map
   {0 :definitely-not
                 1 :probably-not
                 2 :likely-not
@@ -141,16 +141,98 @@
                               :db/cardinality :db.cardinality/one}})
 
 
-(def lconn (d/create-conn schema))
+(defonce lconn (d/create-conn schema))
 (posh! lconn)
 (def cc (cursify lconn))
 
 
+(d/transact! lconn propositions)
+
+(defn terms0 [conn]
+  (let [ts 
+        (posh/q conn '[:find (pull ?e [*])
+                       :where [?e :prop/text]])]
+    (fn []
+      [:div 
+       (for [t @ts]
+         ^{:key t} [:div (pr-str t)])])))
+
+
+
+
+(defn transact-form [conn]
+  (let [editable (atom "")]
+        (fn [conn]
+          (let [dispatchfn  
+                #(do
+                   (d/transact! conn [{:db/id -1
+                                         :prop/text @editable}])
+                  (reset! editable ""))]
+            [:div
+             [:input {:value @editable
+                      :on-change #(reset! editable (-> % .-target .-value))
+                      :on-key-press (fn [e]
+                                      (if (= (.-charCode e) 13)
+                                        (dispatchfn)))}]
+             [:button {:on-click dispatchfn} "spatch me"]]))))
+
 
 (defcard-rg ent
-  [:div 
-   (pr-str @lconn)]
-  cc
-  {:inspect-data true
-   :history true
-})
+  "hey"
+  [:div
+   [transact-form lconn]
+   [terms0 lconn]])
+
+
+
+
+
+
+
+(defn slider [attr conn itm]
+    
+      [:input {:type "range" 
+               :style {:display "flex"}
+               :name "start" 
+               :value (get itm attr 0)
+               :min 0 
+               :max 10 
+               :step 1
+               :on-change (fn [e] 
+                            (do #_(js/alert 
+                                   (js/parseInt (-> e .-target .-value)))
+                                
+                                 (d/transact! conn [{:db/id (:db/id itm) attr
+                                                     (js/parseInt (-> e .-target .-value))}])))}])
+
+
+
+
+
+
+(defn term [conn i]
+  (let [t (posh/pull conn '[*] i)]
+    (fn [conn i]
+      [:div {:style {:display "flex"
+                     :justify-content "space-between"
+                     :background-color "blue"}}
+       [:p  {:style {:flex "4 4 80%"}}
+        (:prop/text @t)]
+       [:div {:style {:display "flex"
+                    }}
+        [slider :prop/certainty conn @t]]])))
+
+(defn terms [conn]
+  (let [ts 
+        (posh/q conn '[:find (pull ?e [*])
+                       :where [?e :prop/text]])]
+    (fn [conn]
+      [:div 
+       (doall (for [[t] @ts]
+                 ^{:key t} [:div 
+                            (assert (:db/id t) "has id")
+                            [term conn (:db/id t)]]))])))
+
+
+(defcard-rg t4
+  [terms lconn])
