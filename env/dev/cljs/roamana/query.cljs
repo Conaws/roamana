@@ -578,7 +578,7 @@ r)))
 (defn node [id]
   (let [dv (subscribe [:simple/pull '[*] id])]
     (fn []
-      [:div {:style {:display "flex"
+      [:div {:style  {:display "flex"
                      :background-color "grey"
                     ; :padding "5px"
                      :flex-flow "column"}}
@@ -604,6 +604,22 @@ r)))
 
 
 
+(defn note-filter [text]
+  (let [d (subscribe [::active-entity])
+        txt (subscribe [::pull] [d])
+        ]
+    (fn [text]
+      [:div.flex {:style {:grid-area "active"
+                }}
+       [:textarea#note
+        {:value  text
+         :on-change #(do
+                       (if (< 0 @d) 
+                         (dispatch [:roamana.search/transact 
+                                    [{:db/id @d :node/body 
+                                      (-> % .-target .-value)
+                                      }]])))}]])))
+
 
 
 
@@ -616,6 +632,8 @@ r)))
     (fn []
       [:div {:style  {:display "grid"
                       :grid-template-columns "10px 2fr 2fr 2fr 10px"
+                ;      :grid-row-gap "10px"
+                ;      :grid-column-gap "10px"
                       :grid-template-areas 
                       "'.. search  search search ..'
                        '.. outline active localstate ..'
@@ -625,10 +643,7 @@ r)))
                       }}
        [search]
        [outline-filter]
-       [:div#note {:style {:grid-area "active"
-                      :background-color "grey"}}
-        (pr-str @dv)
-        ] 
+       [note-filter (:node/body @dv)] 
        [:div {:style {:grid-area "filterview"}}
         ^{:key @d} [node @d]]
        [:div {:style {:grid-area "localstate"
