@@ -332,7 +332,7 @@
 
 
 
-(defn grid [mdb]
+(defn grid-create [mdb]
   (fn [mdb]
     (let [rs (map #(str "Row" %) (range 20))
           cls (map #(str "Column" %) (range 20))]
@@ -403,11 +403,321 @@
        ])))
 
 
-(def db3 (atom {:components [{:row "Row5"
+(defonce db3 (atom {:components [{:row "Row5"
                               :col "Column5"}]}))
 
 
 (defcard-rg click-grid
-  [grid db3]
-  db2
+  [grid-create db3]
+  db3
   {})
+
+
+
+(defn compo-path [id]
+  [:components
+   ALL
+   (fn [c]
+     (= (:id c) id))])
+
+
+
+(defn grid-move1 [mdb]
+  (fn [mdb]
+    (let [rs (map #(str "Row" %) (range 20))
+          cls (map #(str "Column" %) (range 20))]
+      [:div {:on-mouse-up (fn [e]
+                                 (swap! mdb #(setval :down false %)))
+             :style {:display "grid"
+                     :grid-template-rows (make-row rs)
+                     :grid-template-columns (make-column cls)
+                    ; :grid-row-gap "2px"
+                    ; :grid-column-gap "2px"
+                                        ;:align-items "center"
+                     :width "700px"
+                     :height "700px"}}
+      
+       [:div (:row-header header-styles)]
+       [:div (:column-header header-styles)]
+                                        ;(pr-str (type (make-column (:columns @mdb))))
+
+       (for [comp (:components @mdb)]
+         [:div
+          {:style {:grid-column (str (:col comp) " / span 2")
+                   :grid-row (:row  comp)
+               ;    :overflow "hidden"
+               ;    :max-width "20px"
+               ;    :max-height "20px"                   
+                   :background-color (:color comp "Green")
+                   :z-index 5}
+           :on-click (fn [e]
+                       (let [c (:id comp)]
+                         (swap! mdb #(->> %  
+                                          (setval :active c)
+                                          (setval :dragging true)
+                                          (setval [(compo-path c) :color] "Orange"))
+)))
+           
+           }
+          (:id comp)])
+       
+
+       (for [r rs
+             c cls]
+         ^{:key (str r c)} 
+         [:div {:style {:grid-column c
+                        :grid-row r
+                        :min-width "20px"
+                        :min-height "20px"
+                        :border "1px solid white"
+                        :border-width "1px 1px 0px 0px "
+                        :background-color "#D8d8d8"}
+                :on-mouse-enter #(do 
+                             (let [a {:row r
+                                      :col c}]
+                               (if (:down  @mdb)
+                                 :a))
+                             )
+                :on-mouse-down (fn [e]
+                                 (swap! mdb #(setval :down true %)))
+                
+                :on-click (fn [e] 
+                            (do 
+                                (let [a {:row r
+                                         :col c
+                                         :id  (str r c)}]
+                                  (if (not (:dragging @mdb))
+                                  (swap! mdb (fn [m] (transform :components
+                                                              (fn [vector-of-comps]
+                                                                (if vector-of-comps
+                                                                  (conj vector-of-comps a)
+                                                                  [a])) m)))
+                                  (swap! mdb (fn [m]
+                                               (let [co (:active m)]
+                                                 (->> m
+                                                   (setval [(compo-path co) :row] r )
+                                                   (setval [(compo-path co) :color] "Green" )
+                                                   (setval [(compo-path co) :col] c )
+                                                   (transform :dragging not)
+                                                   ))))))))}
+                        " "    
+                            #_(str r " " c)])
+       ])))
+
+
+
+
+
+
+
+
+(defcard-rg grid-move1
+  [grid-move1 db3]
+  db3
+  {:inspect-data true
+   :history true})
+
+
+(defn comp1 [mdb comp] 
+  [:div
+   {:style {:grid-column (str (:col comp) " / span 3")
+            :grid-row (str   (:row  comp) "/ span  2")
+            :font-size "10px"
+            :background-color (:color comp "Green")
+            :z-index 5}
+    :on-click (fn [e]
+                (let [c (:id comp)]
+                  (if (:dragging @mdb)
+                    (swap! mdb #(->> %  
+                                     (setval :active c)
+                                     (setval :dragging false)
+                                     (setval [(compo-path c) :color] "Green"))
+                           )
+                    (swap! mdb #(->> %  
+                                     (setval :active c)
+                                     (setval :dragging true)
+                                     (setval [(compo-path c) :color] "Orange"))
+                           ))))}
+          (:id comp)])
+
+
+
+(defn reposition  [mdb r c]
+  (swap! mdb (fn [m]
+               (let [co (:active m)]
+                 (->> m
+                      (setval [(compo-path co) :row] r )
+                      (setval [(compo-path co) :col] c )
+                      )))))
+
+
+(defn grid-reposition [mdb]
+  (fn [mdb]
+    (let [rs (map #(str "Row" %) (range 20))
+          cls (map #(str "Column" %) (range 20))]
+      [:div {:style {:display "grid"
+                     :grid-template-rows (make-row rs)
+                     :grid-template-columns (make-column cls)
+                     :width "700px"
+                     :height "700px"}}
+       [:div (:row-header header-styles)]
+       [:div (:column-header header-styles)]
+       (for [comp (:components @mdb)]
+         [comp1 mdb comp])
+       (for [r rs
+                    c cls]
+                ^{:key (str r c)} 
+                [:div {:style {:grid-column c
+                               :grid-row r
+                               :min-width "20px"
+                               :min-height "20px"
+                               :border "1px solid white"
+                               :border-width "1px 1px 0px 0px "
+                               :background-color "#D8d8d8"}
+                       :on-mouse-enter #(do 
+                                          (let [a {:row r
+                                                   :col c}]
+                                            (if (:dragging  @mdb)
+                                              (reposition mdb r c))))
+                       
+                       :on-mouse-down 
+                       (fn [e]
+                         (swap! mdb #(setval :down true %)))
+                       
+                       :on-click (fn [e] 
+                                   (do 
+                                     (let [a {:row r
+                                              :col c
+                                              :id  (str r c)}]
+                                       (if (not (:dragging @mdb))
+                                         (swap! mdb (fn [m] (transform :components
+                                                                       (fn [vector-of-comps]
+                                                                         (if vector-of-comps
+                                                                           (conj vector-of-comps a)
+                                                                           [a])) m)))
+                                         #_(reposition mdb r c)
+                                         ))))}
+                 " "])])))
+
+
+
+(defcard-rg grid-reposition
+  [grid-reposition db3]
+  db3
+  {:inspect-data true
+   :history true})
+
+
+(defn comp2 [mdb comp] 
+  [:div
+   {:style {:grid-column (str (:col comp) " / span " (:width comp))
+            :grid-row (str   (:row  comp) "/ span "  (:height comp))
+            :font-size "10px"
+            :overflow "scroll"
+            :background-color (:color comp "Green")
+            :z-index (:z comp 5)
+            }
+    }
+
+    [:button {:on-click (fn [e]
+                          (let [c (:id comp)]
+                            (if (:dragging @mdb)
+                              (swap! mdb #(->> %  
+                                               (setval :active nil)
+                                               (setval :dragging false)
+                                               (setval [(compo-path c) :color] "Blue")))
+                              (swap! mdb #(->> %  
+                                               (setval :active c)
+                                               (setval :dragging true)
+                                               (setval [(compo-path c) :color] "Orange"))
+                                     ))))}
+     (:id comp)]
+   [:button {:on-click 
+             (fn [e] (swap! mdb #(->> %
+                                      (transform [(compo-path (:id comp)) :width] 
+                                                (fn [i]
+                                                  (if i
+                                                    (inc i)
+                                                    2))))))}
+    :wider]
+   [:button {:on-click 
+             (fn [e] (swap! mdb #(->> %
+                                      (transform [(compo-path (:id comp)) :height] 
+                                                (fn [i]
+                                                  (if i
+                                                    (inc i)
+                                                    2))))))}
+    :taller]
+   [:button {:on-click 
+             (fn [e] (swap! mdb #(->> %
+                                      (transform [(compo-path (:id comp)) :z] 
+                                                (fn [i]
+                                                  (if i
+                                                    (dec i)
+                                                    5))))))}
+    :back]
+   (:z comp 5)
+   ])
+
+
+
+
+(def make-column1 (partial make-grid-string "[Column-Headers]" "[end]" " 35px "))
+(def make-row1 (partial make-grid-string "[Row-Headers]" "[end]" " 35px "))
+
+
+(defn grid [mdb]
+  (fn [mdb]
+    (let [rs (map #(str "Row" %) (range 20))
+          cls (map #(str "Column" %) (range 20))]
+      [:div {:style {:display "grid"
+                     :grid-template-rows (make-row1 rs)
+                     :grid-template-columns (make-column1 cls)
+                     :width "700px"
+                     :height "700px"}}
+       [:div (:row-header header-styles)]
+       [:div (:column-header header-styles)]
+       (for [comp (:components @mdb)]
+         [comp2 mdb comp])
+       (for [r rs
+                    c cls]
+                ^{:key (str r c)} 
+                [:div {:style {:grid-column c
+                               :grid-row r
+                               :min-width "20px"
+                               :min-height "20px"
+                               :border "1px solid white"
+                               :border-width "1px 1px 0px 0px "
+                               :background-color "#D8d8d8"}
+                       :on-mouse-enter #(do 
+                                          (let [a {:row r
+                                                   :col c}]
+                                            (if (:dragging  @mdb)
+                                              (reposition mdb r c))))
+                       
+                       :on-mouse-down 
+                       (fn [e]
+                         (swap! mdb #(setval :down true %)))
+                       
+                       :on-click (fn [e] 
+                                   (do 
+                                     (let [a {:row r
+                                              :col c
+                                              :id  (str r c)}]
+                                       (if (not (:dragging @mdb))
+                                         (swap! mdb (fn [m] (transform :components
+                                                                       (fn [vector-of-comps]
+                                                                         (if vector-of-comps
+                                                                           (conj vector-of-comps a)
+                                                                           [a])) m)))
+                                         #_(reposition mdb r c)
+                                         ))))}
+                 " "])])))
+
+
+
+(defcard-rg grid-next
+  [grid db3]
+  db3
+  {:inspect-data true
+   :history true})

@@ -118,12 +118,12 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
                          (do
                            
                            #_(js/alert [@d @s])
-                           (if (= -1 @d)
+                           (if (= 0 @d)
                              (dispatch [::transact [{:db/id -1
                                                      :node/text @s}]]))
                            (move-focus "note" %)))
          :on-change  #(do
-                        (dispatch [::assoc ::depth -1])
+                        (dispatch [::assoc ::depth 0])
                         (dispatch [::assoc ::search (->
                                                        %
                                                        .-target
@@ -257,12 +257,11 @@ lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlor
  (fn [db]
  ;  (js/alert "down")
    (if (< 0 (::depth db))
-     (do(move-focus "note")
+     (do (move-focus "note")
         (update db ::depth dec))
      (if (= 0 (::depth db)) 
        (do (move-focus "search")
-           ;(js/alert "hey")
-           (update db ::depth dec))
+         db)
        db))))
 
 
