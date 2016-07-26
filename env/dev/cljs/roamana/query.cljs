@@ -317,6 +317,7 @@ r)))
 
 (defn search-keys []
   (key/unbind-all!)
+  #_(js/alert "bound")
   (key/bind! "ctrl-l" ::focus-search #(move-focus "search" %))
   (key/bind! "ctrl-n" ::focus-search #(move-focus "note" %))
   (key/bind! "tab" ::focus-search #(move-focus "note" %))
@@ -357,7 +358,7 @@ r)))
               [[pos [id text]] 
                (map-indexed vector @results)]
            (if (= pos @depth)
-             [Viewable (pr-str text)]
+             ^{:key id}[Viewable (pr-str text)]
              ^{:key id}[:div.node
                         {:on-click
                          #(do 
@@ -497,6 +498,22 @@ r)))
              
              )))))
 
+(deftest setstest
+  (testing "set subscribes"
+    (let [seta  
+          (reaction (set  (range 10)))
+          setb 
+          (reaction (set  (range 4 12)))]
+      (is (= #{4 5 6 7 8 9}
+             @(subscribe [::intersection] [seta setb])))
+      (is (= #{0 1 2 3 4 5 6 7 8 9 10 11 }
+             @(subscribe [::union] [seta setb])))
+      (testing 
+          "Difference takes the first set, and removes values in each subsequent set"
+        (is (= #{0 1 2 3}
+             @(subscribe [::difference] [seta setb])))
+))))
+
 
 (register-sub
  :dynamic/attr
@@ -529,42 +546,110 @@ r)))
               [[pos [id text]] 
                (map-indexed vector @results)]
            (if (= pos @depth)
-             [Viewable (pr-str text)]
+             ^{:key id} [Viewable (pr-str text)]
              ^{:key id}[:div.node
                         {:on-click
                          #(do 
-                            (move-focus "note")
+                            #_(js/alert pos)
+                            #_(move-focus "note")
                             (dispatch [::assoc ::depth pos]))
                          }
                         (pr-str text)])))])))
 
 
+
+(register-handler
+ ::setval
+ (fn [db [_ path result]]
+   (setval path result db)))
+
+(dispatch [::setval :lstate {:working "yes"}])
+
+
+
+
+(register-sub
+ :simple/pull
+ (fn [db [_ pattern id]]
+      (let [conn (:ds @db)]
+        (posh/pull conn pattern id))))
+
+
+(defn node [id]
+  (let [dv (subscribe [:simple/pull '[*] id])]
+    (fn []
+      [:div {:style {:display "flex"
+                     :background-color "grey"
+                    ; :padding "5px"
+                     :flex-flow "column"}}
+       
+       [:div.flex.node-header
+        [:button.circle]
+         (:node/text @dv)]
+       
+       [:div {:style {:display "flex"
+                      :margin-left "20px"
+                      :border-left "1px solid #9b9b9b"
+                 ;     :background-color "blue"
+                      :flex-flow "column"
+                      }}
+        [:div.text
+         (:node/body @dv)]
+        (for [c (:node/children @dv)]
+          [node (:db/id c)])]
+
+
+       ])))
+
+
+
+
+
+
+
+
+
 (defn grid-frame2 []
-  (let [localstate (atom {})
+  (let [lstate (subscribe [::key :lstate])
         d (subscribe [::active-entity])
         dv (subscribe [::pull][d])]
     (fn []
       [:div {:style  {:display "grid"
-                      :grid-template-columns "10px 2fr 2fr 10px"
+                      :grid-template-columns "10px 2fr 2fr 2fr 10px"
                       :grid-template-areas 
-                      "'.. search  search ..'
-                       '.. outline filterview ..'"
+                      "'.. search  search search ..'
+                       '.. outline active localstate ..'
+                       '.. outline filterview filterview ..'
+                       '.. keys .. .. ..'"
                       
                       }}
        [search]
        [outline-filter]
-       [:div.note
-        [:textarea#note
-         {:value (:node/body @dv "")
-          :on-change #(dispatch [::transact [{:db/id @d :node/body 
-                                              (-> % .-target .-value)
+       [:div#note {:style {:grid-area "active"
+                      :background-color "grey"}}
+        (pr-str @dv)
+        ] 
+       [:div {:style {:grid-area "filterview"}}
+        ^{:key @d} [node @d]]
+       [:div {:style {:grid-area "localstate"
+                      :background-color "black"
+                      :color "white"}}
+        [:button 
+         {:on-click #(dispatch [::setval [:lstate :top] @dv])}
+         
+         "go"]
+        (pr-str @lstate)]  
+       [:button
+   {:on-click #(search-keys)
+    :style {:grid-area "keys"}}
+   :keys]
 
-}]])}
-         ]]
        ])))
 
 
-(defcard-rg wa
+(defonce lstate (atom {}))
+
+(defcard-rg wa2
   [grid-frame2])
 
 
@@ -579,21 +664,7 @@ r)))
 
 
 
-(deftest setstest
-  (testing "set subscribes"
-    (let [seta  
-          (reaction (set  (range 10)))
-          setb 
-          (reaction (set  (range 4 12)))]
-      (is (= #{4 5 6 7 8 9}
-             @(subscribe [::intersection] [seta setb])))
-      (is (= #{0 1 2 3 4 5 6 7 8 9 10 11 }
-             @(subscribe [::union] [seta setb])))
-      (testing 
-          "Difference takes the first set, and removes values in each subsequent set"
-        (is (= #{0 1 2 3}
-             @(subscribe [::difference] [seta setb])))
-))))
+
 
 
 
