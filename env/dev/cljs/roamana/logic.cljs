@@ -214,9 +214,15 @@
   (let [t (posh/pull conn '[*] i)]
     (fn [conn i]
       [:div {:style {:display "flex"
-                     :justify-content "space-between"
-                     :background-color "blue"}}
-       [:p  {:style {:flex "4 4 80%"}}
+                     :color "white"
+                   ;  :align-items "flex-start"
+                     :justify-content "space-around"
+                     :opacity (if-let [c  (:prop/certainty @t)] 
+                                (/ c 9)
+                                1)
+                     :background-color "black"}}
+
+       [:p  {:style {}}
         (:prop/text @t)]
        [:div {:style {:display "flex"
                     }}
@@ -236,3 +242,39 @@
 
 (defcard-rg t4
   [terms lconn])
+
+
+(deftest conjo
+  (testing "conj"
+    (is (= #{1 2} (conj #{1} 2)))))
+
+(defn basis [conn]
+  (let [current (atom {:db/id -1 :premises #{} :conclusion 0})
+        results (posh/q conn '[:find ?e ?text
+                               :where
+                               [?e :prop/text ?text]])]
+    (fn [conn]
+      [:div
+       [:h1 "YO"]
+       [:div {:style {:display "flex"
+                      :flex-direction "column"
+                      :align-items "flex-end"
+                      :justify-content "center"}}
+        [:div {:style 
+               {:align-self "flex-start"}}
+         (pr-str @current)]
+        
+        (for [r @results]
+            [:div {:style {:display "flex"
+                           :flex-direction "column"}
+} (pr-str r)
+             [:button {:on-click #(swap! current update :premises (fn [e]
+                                                               (conj e
+                                                                     (first r))))}:p]
+             [:button {:on-click #(swap! current assoc 
+                                         :conclusion 
+                                         (first r))} "c"]])]])))
+
+
+(defcard-rg  basisca
+  [basis lconn])

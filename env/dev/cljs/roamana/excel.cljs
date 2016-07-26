@@ -219,7 +219,7 @@
 
 
 
-(defn grid [mdb]
+(defn grid3 [mdb]
   (fn [mdb]
     (let [rs (:rows @mdb)
           cls (:columns @mdb)]
@@ -259,81 +259,155 @@
                             (str r " " c)])
        ])))
 
-(defcard-rg gridtest
-  [grid db2]
+(defcard-rg gridtest3
+  [grid3 db2]
+  db2
+  {})
+
+
+(deftest make-rows
+  (testing "rows"
+    (is (s/valid? integer? (make-row (map str  (range 20)))))))
+
+
+
+
+
+(defn empty-grid [mdb]
+  (fn [mdb]
+    (let [rs (map #(str "Row" %) (range 20))
+          cls (map #(str "Column" %) (range 20))]
+      [:div {:style {:display "grid"
+                     :grid-template-rows (make-row rs)
+                     :grid-template-columns (make-column cls)
+                    ; :grid-row-gap "2px"
+                    ; :grid-column-gap "2px"
+                                        ;:align-items "center"
+                     :width "700px"
+                     :height "700px"}}
+       #_(for [c cls]
+         [:button {:style
+                   {:grid-row "end"
+                    :grid-column c}}
+          :A])
+#_(for [r rs]
+         [:button {:style
+                   {:grid-row r
+                    :grid-column "end"}}
+          :A])
+       [:div (:row-header header-styles)]
+       [:div (:column-header header-styles)]
+                                        ;(pr-str (type (make-column (:columns @mdb))))
+#_[:h1 rs]
+       #_(for [c cls]
+         [column-header c])
+       #_(for [row rs]
+         [row-header row])
+                                        ;  [column-headers mdb]
+       (for [r rs
+             c cls]
+         ^{:key (str r c)} 
+         [:div {:style {:grid-column c
+                        :grid-row r
+                        :min-width "20px"
+                        :min-height "20px"
+                       
+                        :border "1px solid white"
+                        :border-width "1px 1px 0px 0px "
+                        :background-color "#D8d8d8"}}
+                        " "    
+                            #_(str r " " c)])
+       ])))
+
+
+
+
+
+
+(defcard-rg empty-grid-test
+  [empty-grid db2]
   db2
   {})
 
 
 
 
+(defn grid [mdb]
+  (fn [mdb]
+    (let [rs (map #(str "Row" %) (range 20))
+          cls (map #(str "Column" %) (range 20))]
+      [:div {:on-mouse-up (fn [e]
+                                 (swap! mdb #(setval :down false %)))
+             :style {:display "grid"
+                     :grid-template-rows (make-row rs)
+                     :grid-template-columns (make-column cls)
+                    ; :grid-row-gap "2px"
+                    ; :grid-column-gap "2px"
+                                        ;:align-items "center"
+                     :width "700px"
+                     :height "700px"}}
+      
+       [:div (:row-header header-styles)]
+       [:div (:column-header header-styles)]
+                                        ;(pr-str (type (make-column (:columns @mdb))))
+
+       (for [comp (:components @mdb)]
+         [:div
+          {:style {:grid-column (str (:col comp) " / span 2")
+                   :grid-row (:row  comp)
+                   :overflow "hidden"
+               ;    :max-width "20px"
+               ;    :max-height "20px"
+                   :background-color "Green"
+                   :z-index 5}
+           }
+          "Here"])
+       
+
+       (for [r rs
+             c cls]
+         ^{:key (str r c)} 
+         [:div {:style {:grid-column c
+                        :grid-row r
+                        :min-width "20px"
+                        :min-height "20px"
+                        :border "1px solid white"
+                        :border-width "1px 1px 0px 0px "
+                        :background-color "#D8d8d8"}
+                :on-mouse-enter #(do 
+                             (let [a {:row r
+                                      :col c}]
+                               (if (:down  @mdb)
+                                 (swap! mdb (fn [m] (transform :components
+                                                               (fn [vector-of-comps]
+                                                                 (if vector-of-comps
+                                                                   (conj vector-of-comps a)
+                                                                   [a])) m)))))
+                             )
+                :on-mouse-down (fn [e]
+                                 (swap! mdb #(setval :down true %)))
+                
+                :on-click (fn [e] 
+                            (do 
+                              (let [a {:row r
+                                       :col c}]
+                               
+                                (swap! mdb (fn [m] (transform :components
+                                                              (fn [vector-of-comps]
+                                                                (if vector-of-comps
+                                                                  (conj vector-of-comps a)
+                                                                  [a])) m)))))
+                             )}
+                        " "    
+                            #_(str r " " c)])
+       ])))
 
 
+(def db3 (atom {:components [{:row "Row5"
+                              :col "Column5"}]}))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(defn circle [j i id db]
-	[:circle {
-		:r 0.33
-		:cx (+ 0.5 i) 
-		:cy (+ 0.5 j)
-		:fill "white"
-		:stroke "black"
-		:stroke-width 0.07
-    :on-click #(do 
-                (swap! db assoc-in [:population id :hit] true)
-)
-                }])
-
-
-
-(defn board [db]
-  (let [s (:size @db)]
-    (fn [db]
-      [:center 
-       [:h1 (:text @db)]
-       (into
-        [:svg
-         {:view-box (str "0 0 " s " " s)
-          :height 500
-          :width 500}]
-        (for [i (range s)
-              j (range s)
-              :let [id (+ (* s j) i)]
-              :while (< id (:size @db))]
-          [:rect
-           {:fill "blue"
-            :y i
-            :width 1
-            :height 1
-            :x id}]
-          #_(case (get-in @db [:a j i])
-              0 [rect j i]
-              1 [circle j i]
-              2 [cross2 j i "X wins"])
-          ))])))
-
-(defcard-rg scales
-[board mdb]
-mdb
-{:inspect-data true}
-)
-
+(defcard-rg click-grid
+  [grid db3]
+  db2
+  {})
