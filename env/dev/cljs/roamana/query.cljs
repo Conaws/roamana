@@ -201,7 +201,8 @@
  (fn [db]
    (let [results @(subscribe [::results1])]
      (if (> (count results) (inc (::depth db)))
-       (do (move-focus "note")
+       (do 
+         #_(move-focus "note")
          (update db ::depth inc))))))
 
 
@@ -212,7 +213,8 @@
  (fn [db]
  ;  (js/alert "down")
    (if (< 0 (::depth db))
-     (do (move-focus "note")
+     (do 
+       #_(move-focus "note")
         (update db ::depth dec))
      (if (= 0 (::depth db)) 
        (do (move-focus "search")
@@ -575,7 +577,7 @@ r)))
         (posh/pull conn pattern id))))
 
 
-(defn node [id]
+#_(defn node0 [id]
   (let [dv (subscribe [:simple/pull '[*] id])]
     (fn []
       [:div {:style  {:display "flex"
@@ -596,9 +598,7 @@ r)))
         [:div.text
          (:node/body @dv)]
         (for [c (:node/children @dv)]
-          [node (:db/id c)])]
-
-
+          [node0 (:db/id c)])]
        ])))
 
 
@@ -622,7 +622,7 @@ r)))
 
 
 
-
+(declare node)
 
 
 (defn grid-frame2 []
@@ -645,7 +645,7 @@ r)))
        [outline-filter]
        [note-filter (:node/body @dv)] 
        [:div {:style {:grid-area "filterview"}}
-        ^{:key @d} [node @d]]
+        ^{:key @d} [node d]]
        [:div {:style {:grid-area "localstate"
                       :background-color "black"
                       :color "white"}}
@@ -669,12 +669,149 @@ r)))
 
 
 
+(register-sub
+ :dynamic/pull-all
+ (fn [db [_ pattern][id]]
+   (posh/pull (:ds @db) pattern id)))
+
+
+(declare node-simple)
+
+(defn node [idratom]
+  (let [n (subscribe [:dynamic/pull-all '[:db/id 
+                                          :node/text 
+                                          :node/body
+                                          {:node/children ...}]]
+                     [idratom])]
+    (fn []
+       [node-simple @n])))
+
+
+(defn node-simple [n]
+    (fn [n]
+      [:div {:style  {
+                      :display "flex"
+                      :background-color "grey"
+                      :height  "100%"
+                    ;  :width "100%"
+                    ; :overflow "scroll"
+                    ; :padding "5px"
+                     :flex-flow "column"}}
+       
+       [:div.flex.node-header
+        [:button.circle
+         {:on-click #(do
+                       (dispatch [::setval [:lstate :focused] n])
+                       (dispatch [::setval [:lstate :locked] true]))
+          }
+         ]
+         (:node/text n)]
+       
+       [:div {:style {
+                ;      :display "flex"
+                      :margin-left "20px"
+                      :border-left "1px solid #9b9b9b"
+                 ;     :background-color "blue"
+                      :flex-flow "column"
+                     
+                      }}
+        [:div.text
+         (:node/body n)]
+        (for [c (:node/children n)]
+          ^{:key (:db/id c)}[node-simple c])]
+
+
+       ]))
 
 
 
+(declare node-simple-edit)
 
 
+(defn grid-frame3 []
+  (let [lstate (subscribe [::key :lstate])
+        d (subscribe [::active-entity])
+        dv (subscribe [::pull][d])]
+    (fn []
+      [:div {:style  {:display "grid"
+                      :grid-template-columns "10px 2fr 2fr 2fr 10px"
+                 ;     :grid-row-gap "10px"
+                 ;     :grid-column-gap "10px"
+                      :background-color "lightgrey"
+                ;      :grid-column-gap "10px"
+               ;       :overflow "scroll"
+                      :grid-template-areas 
+                      "'.. search  search search ..'
+                       '.. outline active active ..'
+                       '.. outline active active ..'
+                       "
+                      
+                      }}
+       [search]
+       [outline-filter]
+       (if (:locked @lstate)
+         [:div.gaActive
+          [node-simple-edit  (:focused @lstate)]
+          ]
+         [:div {:style {:grid-area "active"
+                        ;:display "flex"
+                        :overflow "scroll"
+                        :height "500px"
+                        }}
+          [node d]])
+       #_[:div {:style {:grid-area "activoe"
+                      :background-color "black"
+                      :color "white"}}
+        [:button 
+         {:on-click #(dispatch [::setval [:lstate :top] @dv])}
+         
+         "go"]
+        (pr-str @lstate)]  
+       ])))
 
+(defn node-simple-edit [n]
+    (fn [n]
+      [:div {:style  {
+                      :display "flex"
+                      :background-color "grey"
+                      :height  "100%"
+                    ;  :width "100%"
+                    ; :overflow "scroll"
+                    ; :padding "5px"
+                     :flex-flow "column"}}
+       
+       [:div.flex.node-header
+        [:button.circle
+         {:on-click #(do
+                       (dispatch [::setval [:lstate :focused] n])
+                       (dispatch [::setval [:lstate :locked] true]))
+          }
+         ]
+         (:node/text n)]
+       
+       [:div {:style {
+                ;      :display "flex"
+                      :margin-left "20px"
+                      :border-left "1px solid #9b9b9b"
+                 ;     :background-color "blue"
+                      :flex-flow "column"
+                     
+                      }}
+        [:div.text
+         (:node/body n)]
+        [:button {:on-click #(do
+                       (dispatch [::setval [:lstate :focused] nil])
+                       (dispatch [::setval [:lstate :locked] false]))
+          }
+         "add Child"]
+        (for [c (:node/children n)]
+          ^{:key (:db/id c)}[node-simple-edit c])]
+
+
+       ]))
+
+(defcard-rg wa3
+  [grid-frame3])
 
 
 

@@ -606,6 +606,14 @@ background-color: green;
     overflow: scroll;
 }
 
+
+.gaActive {
+    grid-area: active;
+    overflow: scroll;
+    height: 500px;
+}
+
+
 .outline .node {
     grid-row: auto / span 1;
     padding: 5px;
