@@ -702,7 +702,7 @@ r)))
         [:button.circle
          {:on-click #(do
                        (dispatch [::setval [:lstate :focused] n])
-                       (dispatch [::setval [:lstate :locked] true]))
+                       #_(dispatch [::setval [:lstate :locked] true]))
           }
          ]
          (:node/text n)]
@@ -749,7 +749,7 @@ r)))
                       }}
        [search]
        [outline-filter]
-       (if (:locked @lstate)
+       (if (:focused @lstate)
          [:div.gaActive
           [node-simple-edit  (:focused @lstate)]
           ]
@@ -770,45 +770,53 @@ r)))
        ])))
 
 (defn node-simple-edit [n]
+  (let [lstate (subscribe [::key :lstate])]
     (fn [n]
       [:div {:style  {
                       :display "flex"
                       :background-color "grey"
                       :height  "100%"
-                    ;  :width "100%"
-                    ; :overflow "scroll"
-                    ; :padding "5px"
-                     :flex-flow "column"}}
+                                        ;  :width "100%"
+                                        ; :overflow "scroll"
+                                        ; :padding "5px"
+                      :flex-flow "column"}}
        
        [:div.flex.node-header
         [:button.circle
          {:on-click #(do
-                       (dispatch [::setval [:lstate :focused] n])
-                       (dispatch [::setval [:lstate :locked] true]))
+                       (dispatch [::setval [:lstate :focused] nil])
+                       (dispatch [::setval [:lstate :adding-child] nil])
+                       
+                       #_(dispatch [::setval [:lstate :locked] true]))
           }
          ]
-         (:node/text n)]
+        (:node/text n)]
        
        [:div {:style {
-                ;      :display "flex"
+                                        ;      :display "flex"
                       :margin-left "20px"
                       :border-left "1px solid #9b9b9b"
-                 ;     :background-color "blue"
+                                        ;     :background-color "blue"
                       :flex-flow "column"
-                     
+                      
                       }}
         [:div.text
          (:node/body n)]
-        [:button {:on-click #(do
-                       (dispatch [::setval [:lstate :focused] nil])
-                       (dispatch [::setval [:lstate :locked] false]))
-          }
+        
+        (if-let [child-edit-id (:adding-child @lstate)]
+          (if (= child-edit-id (:db/id n))
+            [:textarea
+             ])
+          [:button {:on-click #(do
+                               (dispatch [::setval [:lstate :adding-child] (:db/id n)]))
+                  }
          "add Child"]
+          )
         (for [c (:node/children n)]
           ^{:key (:db/id c)}[node-simple-edit c])]
 
 
-       ]))
+       ])))
 
 (defcard-rg wa3
   [grid-frame3])
@@ -816,10 +824,60 @@ r)))
 
 
 
+(defn focus-append [this]
+  (doto (.getDOMNode this)
+    (.focus)
+    (.setSelectionRange 100000 100000)))
 
 
 
+(defn focus-append-input [m]
+  (r/create-class
+   {:display-name "focus-append-component"
+    :component-did-mount focus-append
+    :reagent-render
+    (fn focus-append-input-render [m]
+      [:input
+       (merge
+        {:type "text"
+         :name "text"
+         :style {:width "100%"}}
+        m)])}))
 
 
+#_(defn editable-string
+  ([path]
+   (editable-string path
+                    (fn update-model [p v]
+                      (dispatch [:assoc-in-path p v]))))
+  ([path write]
+   (let [editing (subscribe [:editing])
+         dv      (subscribe [:title])]
+     (fn []
+       (if (= path @editing)
+         [focus-append-input
+          {:default-value @dv
+           :on-blur
+           (fn editable-string-blur [e]
+             (save path editing write e))
+           :on-key-down
+           (fn editable-string-key-down [e]
+             (case (key-code-name (.-keyCode e))
+               "ESC" (dispatch [:assoc-in-path [:editing] nil])
+               "ENTER" (save path editing write e)
+               nil))}]
+         [:div.editable
+          {:style {:width "100%"
+                   :cursor "pointer"}
+           :on-click
+           (fn editable-string-click [e]
+             (dispatch [:assoc-in-path [:editing] path]))}
+          @dv
+          [:span.glyphicon.glyphicon-pencil.edit]])))))
 
+#_(defn title1 []
+  (fn []
+    [editable-string [:title]]))
 
+#_(defcard-rg title
+  [title1])

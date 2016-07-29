@@ -13,11 +13,15 @@
             [keybind.core :as key]
             [clojure.test.check.generators]
             [roamana.search :as search]
+            [roamana.query :as q]
             [cljs.spec  :as s]
+            [roamana.util :as u]
+            [cljs.pprint :refer [pprint]]
             [clojure.string :as str]
             [cljs.spec.impl.gen :as gen]
             [devcards.core :as dc])
   (:require-macros
+   [roamana.util :refer [s! rev]]
    [cljs.test  :refer [testing is]]
    [com.rpl.specter.macros  :refer [select select-one
                                     setval transform]]
@@ -26,8 +30,168 @@
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
+(def tatom (atom {}))
 
-(defmacro mk [arg] `(dc/mkdn-pprint-source ~arg))
+
+(defn focus-append [this]
+  (doto (.getDOMNode this)
+    (.focus)
+    (.setSelectionRange 100000 100000)))
+
+
+
+(defn focus-append-input [m]
+  (r/create-class
+   {:display-name "focus-append-component"
+    :component-did-mount focus-append
+    :reagent-render
+    (fn focus-append-input-render [m]
+      [:input
+       (merge
+        {:type "text"
+         :name "text"
+         :style {:width "100%"}}
+        m)])}))
+
+
+
+(register-sub
+ ::conn
+ (fn [db]
+   (reaction (:ds @db))))
+
+
+#_(defn add-child [db]
+   (let [conn (:ds db)
+         current (subscribe [::active-entity])
+         kid  (select-one [:tempids (sp/keypath -1)] 
+                          (d/transact! conn [{:db/id -1
+                                              :node/type :text
+                                              :node/text "New Node"}
+                                             [:db/add @current :node/children -1]]))]
+     (do
+       (dispatch [::state-from-conn]) 
+       (when (= 3 (:depth db))
+         (dispatch [::set-root @current]))
+       (dispatch [::inc-depth]))
+     db))
+
+
+
+(defn add-child [conn id]
+  (d/transact! conn [{:db/id -1
+                      :node/type :text
+                      :node/text "New Node"}
+                     [:db/add id :node/children -1]]))
+
+
+(defn n1 [n pid lstate]
+  (let [conn (subscribe [::conn])]
+    (fn [n pid lstate]
+      (let [id (:db/id n)
+            text (:node/text n)]
+        [:div.tree
+         [:div.flex.node-header
+          [:button.circle]
+          (if (= id (:focused @lstate))
+            [focus-append-input
+             {:value text
+              :on-key-down (fn [e]
+                             (do
+                               
+                               (case (->> e
+                                          .-which
+                                          u/key-name)
+                                 "ENTER" (s! lstate (setval :focused nil))
+                                 "TAB" (js/alert (add-child @conn id))
+                                 "ESC" (js/alert text)
+                                 :else)))
+              :on-change
+              #(dispatch [::q/transact [{:db/id (:db/id n)
+                                         :node/text (.. % -target -value)}]])}]
+            [:div
+             (u/c #(s! lstate
+                       (setval :focused id)))
+             text])]
+         [:div.leaf
+          [:div.text
+           (or
+            (:node/body n)
+            )
+           (if-let [parents  (:node/_children n)]
+             (for [p parents
+                   :let [p' (:db/id p)]
+                   :when (not (= p' pid))]
+               [:button p']))]
+          (if-let [children (:node/children n) ] 
+            (for [c children]
+              ^{:key (:db/id c)}[n1 c id lstate]))]
+         ]))))
+
+
+(defn n0 [lstate]
+  (let [conn @(subscribe [::conn])
+        n (posh/pull conn '[:node/text 
+                            :node/body
+                            :node/_children {:node/children ...}] 2)]
+  (fn [lstate]
+    [:div 
+     [n1 @n 0 lstate]])))
+
+
+(defcard-rg n0
+  [n0 tatom]
+  tatom
+  {:inspect-data true
+   :history true})
+
+
+
+
+(defn outline1 [tatom]
+  (let [d (subscribe [::q/active-entity])
+        dv (subscribe [::q/pull] [(reaction 1)])]
+    (fn [tatom]
+      [:div
+
+       [:button
+        (u/c #(s! tatom
+                  (setval :active @dv)))
+       "c"]
+       
+      [:button
+        {:on-click #(s! tatom 
+                        (setval :a "b")
+                        (setval :b  "c"))}
+       "b"] 
+       [:button
+        {:on-click #(swap! tatom 
+                           (fn [m]
+                             (setval :a "a" m)))}]
+      (pr-str @tatom)
+      [q/node d]
+       ]
+      )))
+
+
+
+
+
+
+(defcard-rg ahh
+  [outline1 tatom]
+  tatom
+{:inspect-data true
+ :history true})
+
+
+
+
+
+
+
+
+
 
 
 (register-sub 
@@ -127,7 +291,7 @@
         ]])))
 
 
-(defcard-rg sea
+#_(defcard-rg sea
   [simplegrid])
 
 
@@ -143,5 +307,87 @@
       [:div (pr-str @node)])))
 
 
-(defcard-rg outline
+#_(defcard-rg outline
   [singleoutline])
+
+
+(declare node-simple)
+
+(defn node [idratom]
+  (let [n (subscribe [:dynamic/pull-all '[:db/id 
+                                          :node/text 
+                                          :node/body
+                                          {:node/children ...}]]
+                     [idratom])]
+    (fn []
+       [node-simple @n])))
+
+
+
+
+(defn node-simple-edit [n]
+  (let [lstate (subscribe [::key :lstate])]
+    (fn [n]
+      [:div {:style  {
+                      :display "flex"
+                      :background-color "grey"
+                      :height  "100%"
+                                        ;  :width "100%"
+                                        ; :overflow "scroll"
+                                        ; :padding "5px"
+                      :flex-flow "column"}}
+       
+       [:div.flex.node-header
+        [:button.circle
+         {:on-click #(do
+                       (dispatch [::setval [:lstate :focused] nil])
+                       (dispatch [::setval [:lstate :adding-child] nil])
+                       
+                       #_(dispatch [::setval [:lstate :locked] true]))
+          }
+         ]
+        (:node/text n)]
+       
+       [:div {:style {
+                                        ;      :display "flex"
+                      :margin-left "20px"
+                      :border-left "1px solid #9b9b9b"
+                                        ;     :background-color "blue"
+                      :flex-flow "column"
+                      
+                      }}
+        [:div.text
+         (:node/body n)]
+        
+        (if-let [child-edit-id (:adding-child @lstate)]
+          (if (= child-edit-id (:db/id n))
+            [:textarea
+             ])
+          [:button {:on-click #(do
+                               (dispatch [::setval [:lstate :adding-child] (:db/id n)]))
+                  }
+         "add Child"]
+          )
+        (for [c (:node/children n)]
+          ^{:key (:db/id c)}[node-simple-edit c])]
+
+
+       ])))
+
+
+
+
+(deftest my
+  (testing  "lstate"
+    (is (not (= 1 @(subscribe [::q/key :lstate]))))
+      )
+
+
+)
+
+
+(def v {:inspect-data true
+        :history true})
+
+
+

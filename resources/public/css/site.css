@@ -626,3 +626,19 @@ background-color: green;
 .outline .active {
     background-color:  blue;
 }
+
+
+
+.tree {
+    display: flex;
+    background-color: grey;
+    height: 100%;
+    flex-flow: column;
+}
+
+
+.leaf {
+    margin-left: 20px;
+    border-left: 1px solid #ffffff;
+    flex-flow: column;
+}
