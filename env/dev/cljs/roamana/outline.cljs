@@ -436,8 +436,8 @@
 
 (declare ordered)
 
-(defn o1 [n]
-  (fn [n]
+(defn o1 [n & [order]]
+  (fn [n & [order]]
       (let [ordered-kids (map    
                           (fn [eid]
                             (filter #(= eid
@@ -448,13 +448,21 @@
         ^{:key (:db/id n)} 
         [:div.tree
          [:h1 (:db/id n)]
+         (if order 
+           [:div [:button 
+                  (u/c #(js/alert order))
+                  :inc]
+            [:button 
+             (u/c #(js/alert order))
+             :dec]]
+           )
          (pr-str n)
             [:div.leaf
              (for [kid (:node/order n)
                    :let [k
                          (select-one
                           [(c-path kid)] n)]]
-               [o1 k])]
+               [o1 k (:node/order n)])]
             ])))
 
 
@@ -474,3 +482,56 @@
   {:inspect-data true
    :history true})
 
+
+
+
+(defn ainc [arr x] 
+  (let [v (clj->js arr)
+        xpos (.indexOf v x)]
+    (if-let [swapval (aget v (dec xpos))]
+      (do (aset v xpos swapval)
+          (aset v (dec xpos) x)
+          (js->clj v))
+        arr)))
+
+(defn adec [arr x] 
+  (let [v (clj->js arr)
+        xpos (.indexOf v x)]
+    (if-let [swapval (aget v (inc xpos))]
+      (do (aset v xpos swapval)
+          (aset v (inc xpos) x)
+          (js->clj v))
+      arr)))
+
+
+(ainc  [0 1 2 3] 3)
+
+(adec  [0 1 2 3] 2)
+
+
+
+
+
+
+(deftest moving-vec
+  (testing "transform"
+    (is (= [1 2 3 4 5]  
+           (select-one 
+            (sp/srange-dynamic #(.indexOf % 1) #(.indexOf % 6)) (range 15))))
+    (is (= [1 2 3]  
+           (select-one 
+            (sp/srange-dynamic (fn [_] 0) #(.indexOf % 4)) (range 1 15)))
+        )
+    (is (= [4 5 6]  
+           (select-one 
+            (sp/srange-dynamic #(.indexOf % 4) #(count %)) (range 1 7)))
+        )   
+    (is (= [0 1 2]
+           (adec [0 2 1] 2)))
+   (is (= [0 1 2]
+           (ainc [1 0 2] 0)))
+    (is (= [0 1 2]
+           (ainc [0 1 2] 0)))
+    (is (= [0 1 2]
+           (adec [0 1 2] 2))))
+  )
