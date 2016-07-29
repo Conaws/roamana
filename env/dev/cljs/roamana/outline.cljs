@@ -13,6 +13,7 @@
             [keybind.core :as key]
             [clojure.test.check.generators]
             [roamana.search :as search]
+            [roamana.zz :refer [cursify]]
             [roamana.query :as q]
             [cljs.spec  :as s]
             [roamana.util :as u]
@@ -390,4 +391,86 @@
         :history true})
 
 
+
+(def schema {:node/children {:db/valueType :db.type/ref
+                          :db/cardinality :db.cardinality/many}
+             :node/child-order  {:db/cardinality :db.cardinality/one}})
+
+
+(defonce lconn (d/create-conn schema))
+(posh! lconn)
+(def cc (cursify lconn))
+
+
+(def  sample
+  [{:db/id 1
+    :node/text "First Node"
+    :node/children #{2 3 4 5 6 7}
+    :node/order [7 6 5 4 3 2]}
+   {:db/id 2
+    :node/text "Second"
+    :node/children  #{3 4 5 6 7}
+    :node/order [3 5 7 4 6]}
+   {:db/id 3
+    :node/text "3"}
+   {:db/id 4
+    :node/text "4nod"}
+{:db/id 5
+    :node/text "4nod1"}
+{:db/id 6
+    :node/text "Second"}
+{:db/id 7
+    :node/text "Second"}]
+)
+
+
+(d/transact! lconn sample)
+
+
+(defn c-path [id]
+  [:node/children
+   ALL
+   (fn [c]
+     (= (:db/id c) id))])
+
+
+(declare ordered)
+
+(defn o1 [n]
+  (fn [n]
+      (let [ordered-kids (map    
+                          (fn [eid]
+                            (filter #(= eid
+                                        (:db/id %)))
+                            (:node/children n))
+                          (:node/order n))]
+
+        ^{:key (:db/id n)} 
+        [:div.tree
+         [:h1 (:db/id n)]
+         (pr-str n)
+            [:div.leaf
+             (for [kid (:node/order n)
+                   :let [k
+                         (select-one
+                          [(c-path kid)] n)]]
+               [o1 k])]
+            ])))
+
+
+
+(defn ordered []
+  (let [n (posh/pull lconn '[:node/text
+                             :node/order
+                             {:node/children ...}] 1)]
+    (fn []
+      [o1 @n])))
+
+
+
+(defcard-rg orderr
+  "a"
+  [ordered]
+  {:inspect-data true
+   :history true})
 
