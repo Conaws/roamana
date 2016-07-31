@@ -529,3 +529,68 @@
     (is (= [0 1 2]
            (adec [0 1 2] 2))))
   )
+
+
+
+(defn o2 [id]
+  (let  [n (posh/pull lconn '[:node/text
+                             :node/order
+                              {:node/children 1}] id)]
+    (fn []
+      (let [n @n
+            ordered-kids (map    
+                          (fn [eid]
+                            (filter #(= eid
+                                        (:db/id %)))
+                            (:node/children n))
+                          (:node/order n))
+            id (:db/id n)
+            order (:node/order n)]
+
+        ^{:key id} 
+        [:div.tree
+         [:strong id]
+         [:strong (:node/text n)]
+         (if order
+           (pr-str order))
+         [:div.leaf
+          (for [kid order
+                :let [k
+                      (select-one
+                       [(c-path kid)] n)
+                      ]]
+            ^{:key (str kid 'b)} [:div
+                 
+                 [:div {:style
+                        {:border "1px solid green"
+                         :display "flex"
+                         :align-items "center"}}
+                  [:button 
+                        (u/c #(do
+                               
+                                (d/transact! lconn [{:db/id id
+                                                     :node/order (ainc order kid)}])
+                                )):inc]
+                  [:button 
+                   (u/c #(do
+                                
+                                (d/transact! lconn [{:db/id id
+                                                     :node/order (adec order kid)}])
+                                )):dec]
+                  
+                  [o2 kid]]
+                 ])]
+         ]))))
+
+
+
+(defn order2 []
+  (let [n (posh/pull lconn '[:node/text
+                             :node/order
+                             {:node/children ...}] 1)]
+    (fn []
+      [o2 1])))
+
+
+(defcard-rg o
+  [order2])

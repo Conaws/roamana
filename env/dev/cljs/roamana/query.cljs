@@ -344,7 +344,7 @@ r)))
                    (fn [component]
                      (.scrollIntoViewIfNeeded (r/dom-node component)))
                    :reagent-render (fn [props]
-                                     [:button props])}))
+                                     [:div.node.active props])}))
 
 (defn outline1 []
   (let [results  (subscribe [::results1])
@@ -548,7 +548,7 @@ r)))
               [[pos [id text]] 
                (map-indexed vector @results)]
            (if (= pos @depth)
-             ^{:key id} [Viewable (pr-str text)]
+             ^{:key id} [Viewable text]
              ^{:key id}[:div.node
                         {:on-click
                          #(do 
@@ -556,7 +556,7 @@ r)))
                             #_(move-focus "note")
                             (dispatch [::assoc ::depth pos]))
                          }
-                        (pr-str text)])))])))
+                        text])))])))
 
 
 
