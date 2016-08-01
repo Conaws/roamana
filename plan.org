@@ -33,7 +33,168 @@
    2. Where is that relative to all the currently viewed search results
 *  handlers 
 
-1.  when changing depth, should automatically change visible note
-      -- rather than resetting, depth to 0 when doing search, set to -1
-         that way, you don't change the node you're on just by doing a search
-     
+1. when changing depth, should automatically change visible note
+     -- rather than resetting, depth to 0 when doing search, set to -1
+        that way, you don't change the node you're on just by doing a search
+
+*  creating tree
+
+** pulling out a single map
+
+you take a map, get the db, that goes in
+first position in a vector
+
+you take the value of order, that 
+goes in next position of the vector
+
+{:id 1 :order [1 2 3 4]}
+
+==  [1 [1 2 3 4]]
+
+
+** pulling apart a nested map
+
+
+{:id 0 :order [1 2 3] 
+:children [{:id 2 :order [2 4 5]} ]}
+
+=== [0 [1 2 3] [[2 4 5][][]]]
+
+
+let [next-set  (for...)
+rather than put in the order, just put
+in the full sequence
+
+downside to this -- since not pulling on
+each, is you might not be reactive
+
+
+** specter tests
+
+
+
+;;;; not used
+
+(defn dvec [n]
+  (let [p1 n
+        p2 (ordered-children n)
+        p3 (select [ALL :db/id] p2)
+        p4 (select [ALL :node/order sp/NIL->VECTOR] p2)
+        p5 (select [(transformed partial ordered-children) ALL :db/id] n)
+        p7 (select [(sp/view ordered-children) ALL (sp/view ordered-children)
+                    NIL->VECTOR] p1)]
+    p7
+    #_[p1 p2 p3 p4]
+    ))
+
+(defn dvec2 [n]
+  (let [p1 (:db/id n)
+        p2 (select [(transformed partial ordered-children) ALL :db/id] n)
+        p25 (select [(sp/view ordered-children) 
+                    ALL (sp/view ordered-children)
+                    NIL->VECTOR
+                    ] n)
+        p3 (transform [ALL ALL] :db/id p25)]
+   
+    [p1 p2 p3]
+    ))
+
+(def ordered-path
+  (comp-paths
+   (sp/view ordered-children)
+   NIL->VECTOR))
+
+
+(def ochild (sp/view ordered-children))
+
+
+(defn vec-or-path [node]
+  (vec 
+   (map #(if (:node/order %)
+           (ordered-children %)
+           []) node)))
+
+(deftest anew
+  (let [main (posh/pull lconn '[:node/order
+                               {:node/children ...}] 1)
+       p1 (:db/id @main)
+       p2 (select [ordered-path ALL :db/id NIL->VECTOR] @main)
+       p3 (select [ordered-path ALL (if-path :node/order
+                                             [ordered-path ALL]
+                                             :db/id)] @main)
+       a1 @main
+       a2 (ordered-children a1)
+       a22 (transform ALL :db/id a2)
+       a3 (vec-or-path a2)
+       a33 (transform [ALL ALL] :db/id a3)
+       a4 (transform [ALL ALL ochild]
+                     (fn [s]
+                       (or (map :db/id s) s))
+                     a3)
+      a5 (transform (sp/walker #(:db/id %))
+               (fn [m]
+                 (if (:node/order m)
+                   (ordered-children m)
+                   []))
+               a3 )
+        a6 (final-step a5)
+        a7 (->> a1
+                step
+                step
+                step
+                step
+                final-step)]
+(testing "a"
+    (is (= '(1 (3 5) 3 (7))  
+           (transform (sp/walker #(and (number? %) (even? %))) inc '(1 (3 4) 2 (6)))))
+    (is (= 1 (:db/id a1)))
+    (is (= [7 6 5 4 3 2] a22))
+    (is (= a33 [[]
+               [7]
+               [7]
+               [6 5]
+               [6 5 4]
+               [3 5 7 4 6]])))))
+
+(deftest depth-vec
+  (let [main (posh/pull lconn '[:node/order
+                             {:node/children ...}] 1)
+        active (subscribe [::sub-active])
+        p1 @main
+        p2 (ordered-children p1)
+        p3 (select [ALL :db/id] p2)
+        p4 (select [ALL :node/order sp/NIL->VECTOR] p2)
+        p5 (select [(transformed partial ordered-children) ALL :db/id] p1)
+        p6 (select [(sp/view ordered-children) ALL :db/id] p1)
+        p7 (select [(sp/view ordered-children) ALL (sp/view ordered-children)
+                    NIL->VECTOR] p1)
+        ]
+    (testing "pullapart"
+      (is (= [1] (select [:db/id] @main)))
+      (is (= (s/valid? (s/coll-of vector? []) (select [:node/order] @main))))
+      (is (= [] (select [:node/children ALL :db/id] @main)))
+      (is (= [] (select [:node/children ALL] @main)))
+      (is (= [] (select [] (:node/children @main))))
+      (is (= p3 p5))
+      (is (= p5 p6 p3))
+      (is (= p7 (dvec p1)))
+      (is (= [1] 
+             (for [kid (:node/order @main)
+                :let [
+                      k
+                      (select-one
+                       [(c-path kid)] @main)
+                      ]]
+               (if-let [order (:node/order k)]
+                 order
+                 []))
+             ))
+      (is (= 1 (dvec2 @main)))
+      
+      
+      )))
+
+
+
+
+    

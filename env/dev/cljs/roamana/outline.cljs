@@ -7,9 +7,14 @@
             [com.rpl.specter  :refer [ALL STAY FIRST
                                       MAP-VALS LAST
                                       stay-then-continue 
+                                      NIL->VECTOR NIL->SET
+                                      view walker
+                                      transformed
                                       if-path END cond-path
                                       srange must pred keypath
-                                      collect-one comp-paths] :as sp]
+                                      collect-one comp-paths]
+             :as sp]
+         
             [keybind.core :as key]
             [clojure.test.check.generators]
             [roamana.search :as search]
@@ -25,7 +30,9 @@
    [roamana.util :refer [s! rev]]
    [cljs.test  :refer [testing is]]
    [com.rpl.specter.macros  :refer [select select-one
-                                    setval transform]]
+                                    setval transform
+                                    defnav
+                                    defpathedfn]]
    [reagent.ratom :refer [reaction]]
    [devcards.core :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
@@ -412,16 +419,23 @@
     :node/children  #{3 4 5 6 7}
     :node/order [3 5 7 4 6]}
    {:db/id 3
-    :node/text "3"}
+    :node/text "3"
+    :node/children #{4 5 6}
+    :node/order [6 5 4]}
    {:db/id 4
-    :node/text "4nod"}
-{:db/id 5
-    :node/text "4nod1"}
-{:db/id 6
+    :node/text "4nod"
+    :node/children #{5 6}
+    :node/order [6 5]}
+   {:db/id 5
+    :node/text "4nod1"
+    :node/children #{7}
+    :node/order [7]}
+   {:db/id 6
+    :node/children #{7}
+    :node/order [7]
     :node/text "Second"}
-{:db/id 7
-    :node/text "Second"}]
-)
+   {:db/id 7
+    :node/text "Second"}])
 
 
 (d/transact! lconn sample)
@@ -462,7 +476,7 @@
                    :let [k
                          (select-one
                           [(c-path kid)] n)]]
-               [o1 k (:node/order n)])]
+               ^{:key (str k "a")} [o1 k (:node/order n)])]
             ])))
 
 
@@ -532,8 +546,24 @@
 
 
 
+
+
+(register-sub
+ ::sub-active
+ (fn [db]
+   (reaction (::sub-active @db 1))))
+
+(register-handler
+ ::sub-active
+ (fn [db [_ v]]
+   (setval  ::sub-active v db)))
+
+
+
+
 (defn o2 [id]
-  (let  [n (posh/pull lconn '[:node/text
+  (let  [active (subscribe [::sub-active])
+         n (posh/pull lconn '[:node/text
                              :node/order
                               {:node/children 1}] id)]
     (fn []
@@ -549,7 +579,10 @@
 
         ^{:key id} 
         [:div.tree
-         [:strong id]
+         (if (= @active id)
+           [:button :A]
+           [:button
+            (u/c #(dispatch [::sub-active id])) id])
          [:strong (:node/text n)]
          (if order
            (pr-str order))
@@ -592,5 +625,116 @@
       [o2 1])))
 
 
+
 (defcard-rg o
   [order2])
+
+
+
+
+(defn pos1 []
+  (let [main (posh/pull lconn '[:node/order
+                             {:node/children ...}] 1)
+        active (subscribe [::sub-active])]
+    (js/console.log @active)))
+
+
+(key/bind! "ctrl-o" ::p1 #(pos1))
+
+
+(defn id-path [id]
+ (fn [c]
+   (= (:db/id c) id)))
+
+
+
+
+
+
+(declare ordered-children)
+
+#_(def examplvec [1 
+                 [11 12] 
+                 [[111 112] [121 122]]
+                 [[[1111 1112] []] [[] [1221 1222]]]])
+
+
+
+#_(deftest transformedpath
+  (testing "specter/transformed path"
+
+    (is (s/valid? vector?
+                  (select [ALL odd?] (range 10))))
+    (is (s/valid? vector?
+                  (select-one (transformed [ALL odd?] inc) (range 10))))
+    (is (s/valid? vector?
+                  (select-one (transformed [ALL odd?] 
+                                           (fn [x] (* 2 x))) (range 10))))
+    (is (s/valid? vector?
+                  (select-one (transformed [ALL odd?] 
+                                           (partial * 2)) (range 10))))
+    (is (s/valid? vector?
+                  (select-one (transformed [ALL odd?] 
+                                           (partial * 2)) (range 10))))
+    (is (s/valid? vector?
+                  (transform [(transformed [ALL odd?] (partial * 2)) ALL] #(/ % 2) (range 10))))))
+
+
+
+;; bunch of stuff moved to plan.org
+
+
+
+(defpathedfn repeat-path [walk-path end-path i]
+  (if (= 0 i)
+    end-path
+    [walk-path (repeat-path walk-path end-path (dec i))]))
+
+
+(defn followpath [walkpath endpath depth tree]
+  (vec  (for [i (range depth)] 
+          (select (repeat-path walkpath endpath i) tree))))
+
+
+
+
+
+
+(defn ordered-children [n]
+  (vec (for [kid (:node/order n)
+             :let [k
+                   (select-one
+                    [(c-path kid)] n)]]
+         k)))
+
+
+
+(defn step [m]
+  (transform (sp/walker #(:db/id %))
+             (fn [m]
+               (if (:node/order m)
+                 (ordered-children m)
+                 []))
+             m ))
+
+(defn final-step [m]
+  (transform (sp/walker #(:db/id %))
+               (fn [m]
+                 (if (:node/order m)
+                   (transform [(sp/view ordered-children) ALL] :db/id m)
+                   []))
+               m))
+
+
+(defn vectorify-pulled-atom [n]
+  (let [o (:db/id  @n)
+        o1 (-> @n final-step)
+        o2 (-> @n step final-step )
+        o3 (-> @n step step final-step)
+        o4 (-> @n step step step final-step)]
+    [o o1 o2 o3 o4]))
+
+
+
+
+
