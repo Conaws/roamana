@@ -1,4 +1,7 @@
-(ns roamana.util)
+(ns roamana.util
+  (:require
+   [cljs.spec :as s])
+  )
 
 
 (defn c 
@@ -43,7 +46,8 @@
 
 
 
-
+(defmacro count-till [s f]
+  `(count (take-while #(not f %))))
 
 
 (defmacro rev [h & g]

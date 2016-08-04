@@ -6,7 +6,9 @@
             [instaparse.core  :as insta]
             [com.rpl.specter  :refer [ALL STAY FIRST
                                       MAP-VALS LAST
+                                      ATOM
                                       stay-then-continue 
+                                      srange-dynamic
                                       NIL->VECTOR NIL->SET
                                       view walker
                                       transformed
@@ -38,7 +40,10 @@
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
+
+
 (def tatom (atom {}))
+
 
 
 (defn focus-append [this]
@@ -726,15 +731,307 @@
                m))
 
 
-(defn vectorify-pulled-atom [n]
-  (let [o (:db/id  @n)
-        o1 (-> @n final-step)
-        o2 (-> @n step final-step )
-        o3 (-> @n step step final-step)
-        o4 (-> @n step step step final-step)]
-    [o o1 o2 o3 o4]))
+(defn vectorify [n]
+  (let [o  (:db/id  n)
+        o1 (-> n final-step)
+        o2 (-> n step final-step )
+        o3 (-> n step step final-step)
+        o4 (-> n step step step final-step)]
+    [o1 o2 o3 o4]))
+
+(declare zz4column)
+
+(def dpath (atom [0]))
+
+
+(defn zzCell [dvec c]
+  (fn [dvec c]
+    (if (s/valid? vector? c)
+      (if (empty? c)
+        [:span]
+        [zz4column dvec c])
+      (if (= dvec @dpath) 
+        [search/Viewable (pr-str dvec)]
+        [:div.zzcell 
+         (pr-str dvec)]))))
+
+
+
+(defn zz4column [cid cents]
+  (fn [cid cents]
+    (assert (vector? cid))
+    [:div
+     (for [[rid c] (map-indexed vector cents)
+           :let [id (conj cid rid)]]
+       ^{:key id} [zzCell id c]
+       )]))
+
+
+(def n4  (posh/pull lconn '[:node/order
+                             {:node/children ...}] 1))
+
+(register-sub
+ ::n2
+ (fn [_]
+   (reaction (vectorify @n4))))
+
+(defn zz4 []
+  (let [n (posh/pull lconn '[:node/order
+                             {:node/children ...}] 1)
+        v (subscribe [::n2])]
+    (fn []
+      (let [v @v]
+        [:div 
+         [:div (pr-str v)]
+         [:div
+               {:style {:display "grid"
+                        :background-color "blue"
+                        :height "1000px"
+                        :overflow "scroll"
+                        :width "700px"
+                        :grid-column-gap  "10px"
+                        :grid-template-columns "repeat(4, [column] 1fr)"
+                        }}
+               (for [[col-id col] (map-indexed vector v)]
+                 ^{:key col-id} [zz4column [] col])]]))))
 
 
 
 
+
+(defcard-rg zz4card
+  [zz4]
+  dpath
+  {:inspect-data true
+   :history true})
+
+
+(s/def ::array  js/Array.isArray )
+
+
+(defn first-index
+  ([f] (partial first-index f))
+  ([f s]
+   (count (take-while #(not (f %)) s)))
+  ([f s i]
+   (first-index f (drop i s))))
+
+(defn last-index
+  ([f] (partial last-index f))
+  ([f s]
+   (count (drop-while #(not (f %)) (reverse s))))
+  ([f s i]
+   (first-index f (drop i s))))
+
+
+
+
+(deftest indexhelprs
+  (testing "lastindex"
+    (is (= 2 (last-index even? [1 1 2 2 2 1 1] 2)))))
+
+
+(defn valid 
+  ([a] (partial valid a))
+  ([a b]
+   (s/valid? a b)))
+
+(s/def ::even (s/and integer? even?))
+(s/def ::odd (s/and integer? odd?))
+(s/def ::vec vector?)
+
+
+(defn first-to-last [st ed]
+  (sp/srange-dynamic
+   (first-index #(valid st %))
+   (last-index #(valid ed %))))
+
+(defn kpdepth [d]
+  (vec
+   (for [i d]
+     (keypath i))))
+
+#_(defpathedfn r [walk-path end-path i]
+  (if (= 0 i)
+    end-path
+    [walk-path (repeat-path walk-path end-path (dec i))]))
+
+(let [a [1 2 3 [] 5 6 [] 7]
+          b (clj->js a)
+      c [[] [] [1 2 [3]]]]
+  (select [(first-to-last ::odd ::vec)] a)
+  (select-one [(keypath 2) (keypath 2)] c)
+  (select-one [(kpdepth [2 2])] c)
+)
+
+(defn drop-lastv [v]
+  (vec (drop-last v)))
+
+
+(drop-lastv [0 1 2 3])
+
+(defn dec-path [kpath]
+  (if-let [l (select-one LAST kpath)]
+    (if (>= 0 l)
+      (drop-lastv kpath)
+      (transform LAST dec kpath))))
+
+(defn slideup [kpath dv]
+  (loop [kpath kpath
+         dvec dv]
+    (assert (s/valid? (s/coll-of 
+                       (s/or :v vector?
+                             :i integer?)
+                       []) kpath))
+    (assert vector? dv)
+    (if (seq kpath)
+      (if-let [newpath (dec-path kpath)]
+        (let [search-column (dec (count newpath))]
+            (if-let [r (select-one [(keypath search-column) (kpdepth newpath)] dvec)]
+              (if (integer? r)
+                {:path newpath
+                 :r r}
+                (recur newpath dvec))
+              ))
+          "no")
+      "no")))
+
+(def dgrid1
+  [[0 1 2 3] 
+   [[] [] [20] [30]] 
+   [[] [] [[200 201]] [[300 301]]] 
+   [[] [] [[] [[2010]]]]])
+
+
+(map-indexed vector [0 1 2 3])
+
+
+
+
+
+
+
+
+
+
+
+
+(deftest jsarrays 
+  (testing "arrays"
+    (let [a [1 2 3 [] 5 6 [1 2 3 [4]] 7]
+          b (clj->js a)
+          c (subscribe [::n2])
+          d [[0 1 2 3] 
+             [[] [] [20] [30]] 
+             [[] [] [[200 201]] [[300 301]]] 
+             [[] [] [[] [[2010]]]]]]
+      (is (= 4 (.indexOf a 5)))
+      (is (= 3 (.findIndex b array?)))
+      (is (= 5 (.find (.slice b 3) integer?)))
+      (is (= 5 (.find (-> b
+                           js->clj
+                           reverse
+                           clj->js
+                           (.slice 3)) integer?)))
+      (is (vector? a))
+      (is (s/valid? ::array b))
+      (is (= 4 (select-one [(kpdepth [6 3 0])] a)))
+      (is (= 4 (select-one [(kpdepth [0 3])] @c)))
+      (is (= (select-one [(keypath 0) (kpdepth [2])] d)
+           (:r (slideup [2 0] d))))
+      (is (= (select-one [(keypath 1) (kpdepth [2 0])] d)
+           (:r (slideup [2 1] d))))
+      
+      (slideup [1] d)
+      )))
+
+
+(defn fireslideup []
+  (let [path dpath
+        dvec (subscribe [::n2])
+        ret (slideup @path @dvec)]
+    (if ret
+      (reset! path (:path ret)))))
+
+
+
+(defn in-grid [path grid]
+  (let [searchcol (dec (count path))]
+      (if (select-one [(keypath searchcol)
+                       (kpdepth path)] grid)
+        path)))
+
+
+(defn inc-path [depthpath grid]
+  (let [newpath
+           (transform LAST inc depthpath)]
+    (or
+     (in-grid newpath grid)
+     depthpath)))
+
+
+
+#_(defn slidedown []
+  (let [path dpath
+        dvec (subscribe [::n2])]
+    (reset! dpath (inc-path @dpath @dvec))))
+
+
+(defn slide [slidefn]
+  (let [path dpath
+        dvec (subscribe [::n2])]
+    (transform ATOM
+               (fn [s]
+                 (or
+                  (in-grid
+                   (->> s
+                        slidefn)
+                   @dvec)
+                  s))
+               path)))
+
+
+(defn slidedown []
+  (slide (fn [dpath]
+           (transform LAST inc dpath))))
+
+
+(defn slideright []
+  (slide (fn [dpath] (conj dpath 0))))
+
+(defn slideleft []
+  (slide (fn [e] (vec (drop-last e)))))
+
+#_(defn slideright []
+  (let [path dpath
+        dvec (subscribe [::n2])]
+    (transform ATOM
+               (fn [s]
+                 (or
+                  (in-grid
+                   (conj s 0)
+                   @dvec)
+                  s))
+               path)))
+
+
+
+
+
+
+(key/bind! "up" ::up   #(do  
+                          (fireslideup)
+                          (js/console.log @dpath)))
+(key/bind! "right" ::right  #(do 
+                               (slideright)
+                               #_(transform [sp/ATOM] (fn [s] (conj s 0)) dpath)
+                               (js/console.log @dpath)))
+(key/bind! "down" ::down  #(do 
+                             (slidedown)
+                             #_(transform [sp/ATOM LAST] inc dpath)
+                             (js/console.log @dpath)))
+(key/bind! "left" ::left  #(do
+                             (slideleft)
+                            #_(transform [sp/ATOM] (fn [s] (vec (drop-last s))) dpath)
+                             (js/console.log @dpath)))
 

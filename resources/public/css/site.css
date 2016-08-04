@@ -485,7 +485,8 @@ background-color: green;
     display: grid;
     align-items: center;
     grid-template-columns: repeat(5, 1fr 20px) 150px;
-    grid-template-rows: 150px 10px 150px 10px 150px;
+  
+  grid-template-rows: 150px 10px 150px 10px 150px;
     border: 2px solid black;
 
     div { border: 2px solid black; }
@@ -647,4 +648,18 @@ background-color: green;
 .active {
     background-color: #fffff;
 
+}
+
+.zzcolumn {
+    background-color: grey;
+    padding: 15px;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.zzcell {
+    padding: 10px;
+    border: 1px solid black; 
 }
