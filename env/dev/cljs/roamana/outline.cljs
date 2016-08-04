@@ -748,10 +748,11 @@
   (fn [dvec c]
     (if (s/valid? vector? c)
       (if (empty? c)
-        [:span]
+        [:div ""]
         [zz4column dvec c])
       (if (= dvec @dpath) 
-        [search/Viewable (pr-str dvec)]
+        [:div.zzcell 
+         [search/Viewable (pr-str dvec)]]
         [:div.zzcell 
          (pr-str dvec)]))))
 
@@ -761,6 +762,14 @@
   (fn [cid cents]
     (assert (vector? cid))
     [:div
+     {:style
+      {:display
+       "flex"
+       :flex-direction "column"
+       :align-items "center"
+       :justify-content "center"}
+      
+      }
      (for [[rid c] (map-indexed vector cents)
            :let [id (conj cid rid)]]
        ^{:key id} [zzCell id c]
@@ -903,7 +912,7 @@
    [[] [] [[] [[2010]]]]])
 
 
-(map-indexed vector [0 1 2 3])
+;(map-indexed vector [0 1 2 3])
 
 
 
@@ -970,13 +979,6 @@
      depthpath)))
 
 
-
-#_(defn slidedown []
-  (let [path dpath
-        dvec (subscribe [::n2])]
-    (reset! dpath (inc-path @dpath @dvec))))
-
-
 (defn slide [slidefn]
   (let [path dpath
         dvec (subscribe [::n2])]
@@ -991,10 +993,20 @@
                path)))
 
 
+(defn dec-path2 [dpath]
+  (if-let [l (select-one LAST dpath)]
+    (if (>= 0 l)
+      (drop-lastv dpath)
+      (transform LAST dec dpath))))
+
+
+
+(defn slideup2 []
+  (slide dec-path2))
+
 (defn slidedown []
   (slide (fn [dpath]
            (transform LAST inc dpath))))
-
 
 (defn slideright []
   (slide (fn [dpath] (conj dpath 0))))
@@ -1002,36 +1014,15 @@
 (defn slideleft []
   (slide (fn [e] (vec (drop-last e)))))
 
-#_(defn slideright []
-  (let [path dpath
-        dvec (subscribe [::n2])]
-    (transform ATOM
-               (fn [s]
-                 (or
-                  (in-grid
-                   (conj s 0)
-                   @dvec)
-                  s))
-               path)))
 
 
 
 
 
 
-(key/bind! "up" ::up   #(do  
-                          (fireslideup)
-                          (js/console.log @dpath)))
-(key/bind! "right" ::right  #(do 
-                               (slideright)
-                               #_(transform [sp/ATOM] (fn [s] (conj s 0)) dpath)
-                               (js/console.log @dpath)))
-(key/bind! "down" ::down  #(do 
-                             (slidedown)
-                             #_(transform [sp/ATOM LAST] inc dpath)
-                             (js/console.log @dpath)))
-(key/bind! "left" ::left  #(do
-                             (slideleft)
-                            #_(transform [sp/ATOM] (fn [s] (vec (drop-last s))) dpath)
-                             (js/console.log @dpath)))
+
+(key/bind! "up" ::up  #(slideup2))
+(key/bind! "right" ::right  #(slideright))
+(key/bind! "down" ::down  #(slidedown))
+(key/bind! "left" ::left  #(slideleft))
 
