@@ -153,6 +153,14 @@
      (js/firebase.auth.)
      (js/firebase.auth.GoogleAuthProvider.))))
 
+
+(defn sign-in-with-email []
+  (.createUserWithEmailAndPassword
+   (js/firebase.auth.)
+   "conor@firebase.com"
+   "1234567"))
+
+
 (defn sign-out []
   (do
     (.signOut (js/firebase.auth))
@@ -198,9 +206,13 @@
           :background-repeat "no-repeat"}
          "logout"]
         (pr-str @user)]
-       [:button
-        {:on-click #(sign-in-with-popup)}
-        "login with google"])]))
+       [:div
+        [:button
+         {:on-click #(sign-in-with-email)}
+         "login with email"]
+        [:button
+         {:on-click #(sign-in-with-popup)}
+         "login with google"]])]))
 
 
 
