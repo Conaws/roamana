@@ -16,6 +16,7 @@
                  [ring "1.5.0"]
                  [posh "0.3.5"]
                  [com.rpl/specter                      "0.11.2"]
+                 [cljsjs/firebase "3.2.0-0"]
                  [ring/ring-defaults "0.2.1"]
                  [compojure "1.5.0"]
                  [keybind "2.0.0"]

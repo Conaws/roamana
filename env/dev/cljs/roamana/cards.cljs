@@ -17,6 +17,7 @@
             [roamana.basic.kanban]
             [roamana.basic.multiembed]
             [roamana.basic.ents]
+            [roamana.basic.fire :as firebase]
             [roamana.svg.foreign]
             [roamana.basic.recomplete]
             [reagent.session :as session]
@@ -34,6 +35,8 @@
 
 (reagent/render [:div] (.getElementById js/document "app"))
 
+
+(firebase/init)
 ;; remember to run 'lein figwheel devcards' and then browse to
 ;; http://localhost:3449/cards
 
