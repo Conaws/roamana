@@ -10,6 +10,7 @@
             [roamana.search]
             [roamana.links]
             [roamana.logic]
+            [roamana.parser]
             [roamana.query]
             [roamana.excel]
             [roamana.outline]

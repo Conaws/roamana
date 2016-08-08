@@ -3,7 +3,6 @@
             [re-frame.core :refer [subscribe dispatch register-handler register-sub]]
             [posh.core :refer [posh!] :as posh]
             [datascript.core :as d]
-            [instaparse.core  :as insta]
             [com.rpl.specter  :refer [ALL STAY FIRST
                                       MAP-VALS LAST
                                       ATOM
@@ -15,7 +14,7 @@
                                       if-path END cond-path
                                       srange must pred keypath
                                       collect-one comp-paths]
-             :as sp]
+            ]
          
             [keybind.core :as key]
             [clojure.test.check.generators]
@@ -27,7 +26,7 @@
             [cljs.pprint :refer [pprint]]
             [clojure.string :as str]
             [cljs.spec.impl.gen :as gen]
-            [devcards.core :as dc])
+            [devcards.core])
   (:require-macros
    [roamana.util :refer [s! rev]]
    [cljs.test  :refer [testing is]]
@@ -36,7 +35,7 @@
                                     defnav
                                     defpathedfn]]
    [reagent.ratom :refer [reaction]]
-   [devcards.core :as dc
+   [devcards.core
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
@@ -46,14 +45,14 @@
 
 
 
-(defn focus-append [this]
+#_(defn focus-append [this]
   (doto (.getDOMNode this)
     (.focus)
     (.setSelectionRange 100000 100000)))
 
 
 
-(defn focus-append-input [m]
+#_(defn focus-append-input [m]
   (r/create-class
    {:display-name "focus-append-component"
     :component-did-mount focus-append
@@ -405,8 +404,8 @@
 
 
 (def schema {:node/children {:db/valueType :db.type/ref
-                          :db/cardinality :db.cardinality/many}
-             :node/child-order  {:db/cardinality :db.cardinality/one}})
+                             :db/cardinality :db.cardinality/many}
+             :node/order  {:db/cardinality :db.cardinality/one}})
 
 
 (defonce lconn (d/create-conn schema))
@@ -441,6 +440,20 @@
     :node/text "Second"}
    {:db/id 7
     :node/text "Second"}])
+
+
+
+(def set-example [{:db/id 8
+                   :set/type :set/union
+                   :set/members #{1 3}}
+                  {:db/id 9
+                   :set/type :set/difference
+                   :set/outer #{1}
+                   :set/removed #{2}}])
+
+
+
+
 
 
 (d/transact! lconn sample)

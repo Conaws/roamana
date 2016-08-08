@@ -29,11 +29,13 @@
                  [org.clojure/clojurescript "1.9.36"
                   :scope "provided"]
                  [secretary "1.2.3"]
+                 [figwheel-sidecar "0.5.0"]
                  [venantius/accountant "0.1.7"
                   :exclusions [org.clojure/tools.reader]]]
 
   :plugins [[lein-environ "1.0.2"]
             [lein-cljsbuild "1.1.1"]
+
             [lein-asset-minifier "0.2.7"
              :exclusions [org.clojure/clojure]]]
 
