@@ -1,6 +1,7 @@
 (ns roamana.util
   (:require
-   [cljs.spec :as s])
+    [cljs.spec :as s]
+    [clojure.string :as str])
   )
 
 
@@ -34,8 +35,18 @@
      :else))
 
 
+(defn count-tabs
+  [string]
+  (count (take-while #{\tab} string)))
 
 
+(def sstring "nodeA\n\tnode1\n\t\tnodeB\n\n\n\t\tnodeC")
+
+(defn parsed [text]
+    (->> (str/split text #"\n")
+         (map (juxt count-tabs str/trim))
+         (filter #(not (empty? (second %))))
+))
 
 
 
@@ -47,7 +58,7 @@
 
 
 (defmacro count-till [s f]
-  `(count (take-while #(not f %))))
+  `(count (take-while #(not (f %)))))
 
 
 (defmacro rev [h & g]

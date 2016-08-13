@@ -14,7 +14,7 @@
                                       if-path END cond-path
                                       srange must pred keypath
                                       collect-one comp-paths]
-            ]
+             :as sp]
          
             [keybind.core :as key]
             [clojure.test.check.generators]
@@ -26,7 +26,7 @@
             [cljs.pprint :refer [pprint]]
             [clojure.string :as str]
             [cljs.spec.impl.gen :as gen]
-            [devcards.core])
+            [devcards.core :as dc])
   (:require-macros
    [roamana.util :refer [s! rev]]
    [cljs.test  :refer [testing is]]
@@ -35,7 +35,7 @@
                                     defnav
                                     defpathedfn]]
    [reagent.ratom :refer [reaction]]
-   [devcards.core
+   [devcards.core :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
@@ -45,14 +45,14 @@
 
 
 
-#_(defn focus-append [this]
+(defn focus-append [this]
   (doto (.getDOMNode this)
     (.focus)
     (.setSelectionRange 100000 100000)))
 
 
 
-#_(defn focus-append-input [m]
+(defn focus-append-input [m]
   (r/create-class
    {:display-name "focus-append-component"
     :component-did-mount focus-append

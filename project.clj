@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/clojure "1.9.0-alpha4"]
+  :dependencies [[org.clojure/clojure "1.9.0-alpha10"]
                  [ring-server "0.4.0"]
                  [reagent "0.6.0-rc"]
                  [reagent-forms "0.5.24"]
@@ -26,10 +26,10 @@
               ;   [alandipert/storage-atom               "2.0.1"]
                  [hiccup "1.0.5"]
                  [yogthos/config "0.8"]
-                 [org.clojure/clojurescript "1.9.36"
+                 [org.clojure/clojurescript "1.9.198"
                   :scope "provided"]
                  [secretary "1.2.3"]
-                 [figwheel-sidecar "0.5.0"]
+              ;   [figwheel-sidecar "0.5.4-6"]
                  [venantius/accountant "0.1.7"
                   :exclusions [org.clojure/tools.reader]]]
 
@@ -53,7 +53,7 @@
    [:cljsbuild :builds :app :compiler :output-dir]
    [:cljsbuild :builds :app :compiler :output-to]]
 
-  :source-paths ["src/clj" "src/cljc"]
+  :source-paths ["src/clj" "src/cljc" "script"]
   :resource-paths ["resources" "target/cljsbuild"]
 
   :minify-assets
@@ -69,7 +69,7 @@
               :optimizations :advanced
               :pretty-print  false}}
             :app
-            {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
+            {:source-paths ["src/cljs" "src/cljc" "script" "env/dev/cljs"]
              :compiler
              {:main "roamana.dev"
               :asset-path "/js/out"
@@ -81,7 +81,7 @@
 
 
             :devcards
-            {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
+            {:source-paths ["src/cljs" "src/cljc" "script" "env/dev/cljs"]
              :figwheel {:devcards true}
              :compiler {:main "roamana.cards"
                         :asset-path "js/devcards_out"
