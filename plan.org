@@ -198,3 +198,12 @@ each, is you might not be reactive
 
 
     
+* August 15, 2016
+
+** 03:17:53
+back to the crazy emacsing
+
+love that i've been able to get my workflow working with spacemacs 
+
+
+

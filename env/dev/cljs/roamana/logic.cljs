@@ -60,7 +60,7 @@
 (s/def ::conclusion (s/or :id  :db/id 
                           :prop ::propositions))
 
-(s/def :prop/basis (s/coll-of ::argument []))
+(s/def :prop/basis (s/coll-of ::argument :into []))
 
 (s/def :prop/text string?)
 

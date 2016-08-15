@@ -50,6 +50,7 @@
 
 
 
+
 (defmacro s! [a & fns]
   `(swap! ~a 
           (fn [m#]
@@ -71,3 +72,5 @@
   "I don't do a whole lot."
   [x]
   (println x "Hello, World!"))
+
+

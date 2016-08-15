@@ -38,7 +38,7 @@
    [devcards.core :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
-
+(enable-console-print!)
 
 
 (def tatom (atom {}))
@@ -904,7 +904,7 @@
     (assert (s/valid? (s/coll-of 
                        (s/or :v vector?
                              :i integer?)
-                       []) kpath))
+                       :into []) kpath))
     (assert vector? dv)
     (if (seq kpath)
       (if-let [newpath (dec-path kpath)]
