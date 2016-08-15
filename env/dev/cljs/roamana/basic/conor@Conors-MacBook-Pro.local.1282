@@ -1,0 +1,63 @@
+(ns roamana.basic.flex
+  (:require [reagent.core :as reagent :refer [atom]]
+            [posh.core :refer [posh!] :as posh]
+            [datascript.core :as d]
+            [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
+                                      stay-then-continue 
+                                      if-path END cond-path
+                                      must pred keypath
+                                      collect-one comp-paths] :as sp]
+            [keybind.core :as key]
+            [cljs.spec  :as s]
+            [roamana.zz :refer [cursify]]
+            [goog.i18n.DateTimeFormat :as dtf]
+            [roamana.core :as core])
+  (:require-macros
+   [com.rpl.specter.macros  :refer [select setval defnav 
+                                    defpathedfn
+                                    defnavconstructor
+                                    fixed-pathed-nav
+                                    variable-pathed-nav
+                                    transform declarepath providepath]]
+   [reagent.ratom :refer [reaction]]
+   [devcards.core
+    :as dc
+    :refer [defcard defcard-doc defcard-rg deftest]]))
+
+
+(enable-console-print!)
+
+
+
+
+
+
+
+(def lorem 
+
+"lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnoj
+lorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem [[embed]] ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnojlorem ipsum impsalklk lkajklag lkagjlketa lkjalkdonovith ooOHn goNggan oagnoj"
+)
+
+(defn embed []
+  (fn []
+    [:div {:style {:display "flex"}}
+     [:div  {:style {:border "2px solid blue"
+                     :width "50%"}}
+      lorem]
+     [:div {:style {:border "2px solid green"
+                    :overlow "scroll"
+                    :width "25%"}}
+      (str lorem lorem lorem)]
+     ]))
+
+
+(defcard-rg testtt
+  [:div
+   [embed]]
+  )
+
+(defcard-rg embed-test
+  [embed]
+ )
+

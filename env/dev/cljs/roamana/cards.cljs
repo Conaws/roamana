@@ -6,6 +6,7 @@
             [roamana.zz3]
             [roamana.storage]
             [roamana.basic.gridview]
+            [roamana.basic.flex]
             [roamana.popover]
             [roamana.search]
             [roamana.links]

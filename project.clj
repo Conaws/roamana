@@ -53,7 +53,7 @@
    [:cljsbuild :builds :app :compiler :output-dir]
    [:cljsbuild :builds :app :compiler :output-to]]
 
-  :source-paths ["src/clj" "src/cljc" "script"]
+  :source-paths ["src/clj" "src/cljc" ]
   :resource-paths ["resources" "target/cljsbuild"]
 
   :minify-assets
@@ -69,7 +69,7 @@
               :optimizations :advanced
               :pretty-print  false}}
             :app
-            {:source-paths ["src/cljs" "src/cljc" "script" "env/dev/cljs"]
+            {:source-paths ["src/cljs" "src/cljc"  "env/dev/cljs"]
              :compiler
              {:main "roamana.dev"
               :asset-path "/js/out"
@@ -81,7 +81,7 @@
 
 
             :devcards
-            {:source-paths ["src/cljs" "src/cljc" "script" "env/dev/cljs"]
+            {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
              :figwheel {:devcards true}
              :compiler {:main "roamana.cards"
                         :asset-path "js/devcards_out"

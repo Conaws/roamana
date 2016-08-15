@@ -222,7 +222,6 @@
            (into [:div]))
       s))
 
-(s/instrument #'embed-link)
 
 
 

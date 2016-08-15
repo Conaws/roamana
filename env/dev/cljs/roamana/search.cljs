@@ -313,7 +313,6 @@ r)))
       x])))
 
 
-(s/instrument #'mynew)
 
 
 
