@@ -8,7 +8,7 @@
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       stay-then-continue 
                                       if-path END cond-path
-                                      must pred keypath
+                                     ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
             [cljsjs.firebase]
@@ -35,6 +35,157 @@
 
 
 (def lorem (apply str (repeat 200 "lorem hey impsum ")))
+
+
+
+(declare render-frame*
+         buttons)
+
+(def frame2
+  (atom {:active-frame 1
+         :frames (list 1 2 [3 4] [5 6])})
+  )
+
+(defn render-h* [v frame]
+  (fn [v frame]
+    [:div.full
+     {:style {:display "flex"
+              }}
+     (for [e v]
+       ^{:key (str e v)}
+       [:div.bblack
+        {:style {:background-color "blue"
+                 :overflow "scroll"
+                 :flex 1 1 "20%"}}
+        [render-frame* e frame]])]))
+
+(defn render-v* [v frame]
+  (fn [v frame]
+    [:div.full.white
+     {:style {:display "flex"
+              :flex-direction "column"
+              }}
+     (for [e v ]
+       ^{:key (str e v)}
+       [:div.bblack
+        {:style {:overflow "scroll"
+                 :flex 1 1 "5px"}}
+        [render-frame* e frame]])]))
+
+(defn render-frame* [e frame]
+  (fn [e frame]
+    (cond
+      (list? e)
+      [render-h* e frame]
+      (vector? e)
+      [render-v* e frame]
+      :else
+      [:div.full
+       (if (= e (:active-frame @frame))
+         [:h1 "here"])
+       e
+       ])))
+
+
+
+
+(defn mainframe [frame]
+  (fn [frame]
+    [:div
+     (pr-str @frame)
+     [:h1 (:active-frame @frame)]
+     [buttons frame] 
+     [:div.mainframe
+      [render-frame* (:frames @frame) frame]
+      ]]
+    ))
+
+
+
+(defcard-rg wstate3
+  [mainframe frame2]
+  frame2
+  {:inspect-data true
+   :history true})
+
+
+
+
+
+
+
+(declare render-frame
+         split-h split-v)
+
+(def frame1
+  (atom {:active-frame 1
+         :frames (list 1 2 [3 4] [5 6])})
+  )
+
+(defn inc-frame [f]
+  (transform [ATOM :active-frame] inc f))
+
+(defn dec-frame [f]
+  (transform [ATOM :active-frame] dec f))
+
+
+(defn buttons [frame]
+  [:div
+   [:button
+    (c #(dec-frame frame)) 
+    :dec]
+   [:button
+    (c #(inc-frame frame)) 
+    :inc]
+   [:button
+    (c #(s!
+         frame
+         ((fn [v]
+            (transform :frames (partial split-v
+                                        (:active-frame v)
+                                        )
+                       v)))
+         ))
+    "split vert"]
+   [:button
+    (c #(s!
+         frame
+         ((fn [v]
+            (transform :frames (partial split-h
+                                        (:active-frame v)
+                                        )
+                       v)))
+         ))
+    "split horiz"]]
+  )
+
+
+(defn mainframe0 [frame]
+  (fn [frame]
+    [:div
+     (pr-str @frame)
+     [:h1 (:active-frame @frame)]
+    [buttons frame] 
+     [:div.mainframe
+      [render-frame (:frames @frame)]
+      ]]
+    ))
+
+(defcard-rg wstate
+  [mainframe0 frame1]
+  frame1
+  {:inspect-data true
+   :history true})
+
+
+
+(defcard-rg movement
+  [:div.mainframe
+   [render-frame
+    (list 1 2 [3 4] (str 5 "  " lorem))]])
+
+
+
 
 (defn split-on-x-with [f x v]
   (transform (sp/walker #(= x %))
@@ -136,7 +287,6 @@
                        :flex 1 1 (per-of l)}}
               [render-frame0 e]
               ]
-             
              )]))
 
 

@@ -689,3 +689,9 @@ background-color: green;
 .green {
     background-color: green;
 }
+
+.mainframe {
+    background-color: black;
+    width: 100%;
+    height: 700px;
+}
