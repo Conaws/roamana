@@ -6,13 +6,11 @@
             [goog.dom.forms :as forms]
             [datascript.core :as d]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
-                                      walker stay-then-continue 
-                                      filterer
+                                      walker stay-then-continue filterer
                                       if-path END cond-path
                                       ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
-            
             [cljsjs.firebase]
             [roamana.util :refer [c]
              :refer-macros [s!]]
