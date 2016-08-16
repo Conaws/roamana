@@ -6,7 +6,7 @@
             [goog.dom.forms :as forms]
             [datascript.core :as d]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
-                                      stay-then-continue 
+                                      walker stay-then-continue 
                                       if-path END cond-path
                                      ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
@@ -36,6 +36,45 @@
 
 (def lorem (apply str (repeat 200 "lorem hey impsum ")))
 
+
+
+(declarepath sclean)
+(providepath sclean
+             (if-path
+              coll?
+              (stay-then-continue
+               [ALL sclean])
+              ))
+
+
+
+(defn clean-top  [v]
+  (transform ALL
+             (fn [x]
+               (if (coll? x)
+                 (if  (= 1 (count x))
+                   (first x)
+                   (clean-top x))
+                 x))
+             v))
+
+
+(clean-top [1 2 [3] [4 [6] 5]])
+
+
+
+
+(comment 
+
+  (select [sclean (walker vector?)] [1 2 [3 4] 5 6])
+
+  (transform [sclean
+              (walker vector?)]
+             (fn [s]
+               (if (< 1 (count s))
+                 s
+                 ["12"] ))
+             [1 [2 [4] 3] [3]]))
 
 
 (declare render-frame*

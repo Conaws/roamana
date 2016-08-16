@@ -207,3 +207,25 @@ love that i've been able to get my workflow working with spacemacs
 
 
 
+
+* August 16, 2016
+
+** specter work 
+
+(declarepath TOPSORT3)
+(providepath TOPSORT3
+             (sp/cond-path
+              map?
+               (stay-then-continue
+                [MAP-VALS TOPSORT3])
+              coll?
+                [ALL TOPSORT3]))
+
+
+(declarepath NodeWalker)
+(providepath NodeWalker
+           (sp/cond-path
+             map? #(:tempid %)
+             coll? ALL NodeWalker))
+
+
