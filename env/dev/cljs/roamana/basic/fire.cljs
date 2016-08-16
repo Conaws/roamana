@@ -232,3 +232,6 @@
         :storageBucker ""
         })
   (on-auth))
+
+
+(init)

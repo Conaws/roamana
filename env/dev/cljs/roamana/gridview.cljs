@@ -508,7 +508,6 @@
 
 (s/fdef cell-views :args (s/cat ::atom map?))
 
-(s/instrument #'cell-views)
 
 
 

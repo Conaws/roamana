@@ -4,8 +4,8 @@
             [roamana.zz]
      ;       [roamana.zz2]
             [roamana.zz3]
-            [roamana.storage]
-            [roamana.basic.gridview]
+      ;      [roamana.storage]
+       ;     [roamana.basic.gridview]
             [roamana.basic.flex]
             [roamana.popover]
             [roamana.search]
@@ -38,7 +38,7 @@
 (reagent/render [:div] (.getElementById js/document "app"))
 
 
-(firebase/init)
+;(firebase/init)
 ;; remember to run 'lein figwheel devcards' and then browse to
 ;; http://localhost:3449/cards
 
