@@ -11,6 +11,7 @@
                                      ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
+            
             [cljsjs.firebase]
             [roamana.util :refer [c]
              :refer-macros [s!]]
@@ -49,9 +50,41 @@
              v))
 
 
-(clean-top [1 2 [3] [4 [6] 5]])
+(defn t1 [v x]
+  (filter #(not= x %) v))
+
+#_(declarepath TOPSORT3)
+#_(providepath TOPSORT3
+             (sp/comp-path
+              (sp/filterer #(not= a %))
+              )
+
+             )
 
 
+(let [v [1 2 [3 1 4] 5 [6 1 7]]
+      a 1]
+  (select [
+               (sp/filterer #(not= a %))
+               ALL (if-path vector?
+                        (sp/filterer
+                         #(not= a %))
+                        STAY)] v)
+  
+  )
+
+
+
+
+
+
+
+
+(transform ALL
+           (fn [s]
+             (dissoc s :a ))
+           [{:a 1}{:b 2 :a 1}]
+           )
 
 
 
