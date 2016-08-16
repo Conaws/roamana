@@ -7,8 +7,9 @@
             [datascript.core :as d]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       walker stay-then-continue 
+                                      filterer
                                       if-path END cond-path
-                                     ATOM must pred keypath
+                                      ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
             
@@ -23,12 +24,11 @@
    [cljs.test  :refer [testing is]]
    [com.rpl.specter.macros  :refer [select
                                     select-one
-                                    setval defnav 
+                                    setval 
                                     defpathedfn
-                                    defnavconstructor
-                                    fixed-pathed-nav
-                                    variable-pathed-nav
-                                    transform declarepath providepath]]
+                                    transform
+                                    declarepath
+                                    providepath]]
    [reagent.ratom :refer [reaction]]
    [devcards.core
     :as dc
@@ -36,6 +36,8 @@
 
 
 (def lorem (apply str (repeat 200 "lorem hey impsum ")))
+
+
 
 
 
@@ -53,26 +55,30 @@
 (defn t1 [v x]
   (filter #(not= x %) v))
 
-#_(declarepath TOPSORT3)
-#_(providepath TOPSORT3
-             (sp/comp-path
-              (sp/filterer #(not= a %))
-              )
-
-             )
+(defpathedfn remove-x [x]
+  (filterer #(not= x %)))
 
 
-(let [v [1 2 [3 1 4] 5 [6 1 7]]
-      a 1]
+(defn t3 [v a]
+  (select [
+           (remove-x a)
+           ] v)
+  )
+
+
+(t3 [1 2 [2 3]] 2)
+
+(defn t2 [v a]
   (select [
                (sp/filterer #(not= a %))
                ALL (if-path vector?
                         (sp/filterer
                          #(not= a %))
                         STAY)] v)
-  
   )
 
+
+(t2 [1 2 3 [4 5]] 5)
 
 
 
