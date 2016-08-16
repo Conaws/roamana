@@ -38,16 +38,6 @@
 
 
 
-(declarepath sclean)
-(providepath sclean
-             (if-path
-              coll?
-              (stay-then-continue
-               [ALL sclean])
-              ))
-
-
-
 (defn clean-top  [v]
   (transform ALL
              (fn [x]
@@ -64,17 +54,6 @@
 
 
 
-(comment 
-
-  (select [sclean (walker vector?)] [1 2 [3 4] 5 6])
-
-  (transform [sclean
-              (walker vector?)]
-             (fn [s]
-               (if (< 1 (count s))
-                 s
-                 ["12"] ))
-             [1 [2 [4] 3] [3]]))
 
 
 (declare render-frame*
