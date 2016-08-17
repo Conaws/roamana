@@ -12,7 +12,7 @@
                                      ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
-            
+            [clojure.zip :as z]
             [cljsjs.firebase]
             [roamana.util :refer [c]
              :refer-macros [s!]]
@@ -36,6 +36,14 @@
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
+(pprint (->
+         (z/vector-zip [1 2 [3 4] 5])
+         (z/down)
+         (z/right)
+         (z/right)
+         (z/down)
+         (z/right)
+         (z/node)))
 
 
 (declare render-frame** buttons t4 clean-top)
