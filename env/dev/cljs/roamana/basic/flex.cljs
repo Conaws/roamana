@@ -6,11 +6,13 @@
             [goog.dom.forms :as forms]
             [datascript.core :as d]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
-                                      walker stay-then-continue filterer
+                                      walker stay-then-continue 
+                                      filterer
                                       if-path END cond-path
-                                      ATOM must pred keypath
+                                     ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
+            
             [cljsjs.firebase]
             [roamana.util :refer [c]
              :refer-macros [s!]]
@@ -22,11 +24,12 @@
    [cljs.test  :refer [testing is]]
    [com.rpl.specter.macros  :refer [select
                                     select-one
-                                    setval 
+                                    setval defnav 
                                     defpathedfn
-                                    transform
-                                    declarepath
-                                    providepath]]
+                                    defnavconstructor
+                                    fixed-pathed-nav
+                                    variable-pathed-nav
+                                    transform declarepath providepath]]
    [reagent.ratom :refer [reaction]]
    [devcards.core
     :as dc
@@ -36,6 +39,18 @@
 (def lorem (apply str (repeat 200 "lorem hey impsum ")))
 
 
+(defn remove-x [x]
+  (fn [v]
+     (filterv #(not= x %) v)))
+
+(declarepath AllVectors)
+(providepath AllVectors
+             (if-path vector?
+                      (stay-then-continue
+                       ALL
+                       AllVectors)))
+
+(transform AllVectors (remove-x 5) [1 2 3 [4 [5 6] 5] 5])
 
 
 
@@ -49,9 +64,12 @@
                  x))
              v))
 
+(clean-top [1 [3] [2 3]])
+
 
 (defn t1 [v x]
   (filter #(not= x %) v))
+
 
 (defpathedfn remove-x [x]
   (filterer #(not= x %)))
@@ -60,11 +78,17 @@
 (defn t3 [v a]
   (select [
            (remove-x a)
-           ] v)
-  )
+           ALL
+           (if-path vector?
+                    (remove-x a)
+                    STAY)] v))
 
+(deftest test1
+  (testing "removal"
+    (is
+     (= [1 2 3 [4]]
+        (t3 [1 2 3 [4 5]] 5)))))
 
-(t3 [1 2 [2 3]] 2)
 
 (defn t2 [v a]
   (select [
@@ -72,23 +96,10 @@
                ALL (if-path vector?
                         (sp/filterer
                          #(not= a %))
-                        STAY)] v)
-  )
+                        STAY)] v))
 
 
 (t2 [1 2 3 [4 5]] 5)
-
-
-
-
-
-
-
-(transform ALL
-           (fn [s]
-             (dissoc s :a ))
-           [{:a 1}{:b 2 :a 1}]
-           )
 
 
 
