@@ -43,13 +43,23 @@
 (def frame (atom {:active-frame 1
                   :frames [1 2 3]}))
 
+(defn dec-button [frame]
+  (fn [frame]
+    (let [numbers (select [ATOM :frames (walker int?)] frame)
+          next-dec (apply min (filter #(> (:active-frame @frame) %) numbers))]
+      [:button {:on-click
+                #(do (pprint next-dec)
+                     (if (not (nil? next-dec))
+                       (swap! frame assoc :active-frame next-dec)))}
+       :new-dec])))
+
+
 
 (defn inc-button [frame]
   (fn [frame]
     (let [numbers (select [ATOM :frames (walker int?)] frame)
           top-number (apply max numbers)
           next-inc (apply min (filter #(< (:active-frame @frame) %) numbers))]
-      
       [:button {:on-click
                 #(do (pprint next-inc)
                      (if (not (nil? next-inc))
@@ -120,6 +130,7 @@
      (pr-str @frame)
      [delete-button frame]
      [inc-button frame]
+     [dec-button frame]
      [buttons frame]
      [:div.mainframe
       {:style {:display "flex"}}
