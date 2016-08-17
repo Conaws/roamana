@@ -38,6 +38,31 @@
 
 
 
+(declare mainframe frame1 t4 clean-top)
+
+
+(defn delete-button [framestate]
+  [:button {:on-click
+            #(swap! framestate
+                    (fn [s]
+                      (->> s
+                       (setval :frames
+                               (->> (:frames s)
+                                    (t4 (:active-frame s))
+                                    (clean-top)))
+                       (transform :active-frame inc))))
+            }
+   "DELETE"]
+  )
+
+(defcard-rg newtet
+  [:div
+  [delete-button frame1] 
+   [mainframe frame1]]
+  frame1
+  {:inspect-data true
+   :history true}
+  )
 
 
 
