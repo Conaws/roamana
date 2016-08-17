@@ -50,6 +50,7 @@
                        ALL
                        AllVectors)))
 
+
 (transform AllVectors (remove-y 5) [1 2 3 [4 [5 6] 5] 5])
 
 (defnav ALL-ELEM-SEQ []
@@ -61,11 +62,17 @@
               ))
 
 
-(transform [ALL-ELEM-SEQ (sp/selected? sp/FIRST even?)]
-           (fn [[e]] (repeat e e))
-           [1 2 3 4 5])
 
-(mapcat reverse [[1 2][][1 2]] )
+(setval [AllVectors ALL-ELEM-SEQ #(= 5 (first %))]
+        nil
+        [5 [5 5] 7 8])
+
+;;  ALL-ELEM-SEQ won't work because it changes the structure
+;;  the current version won't work because it will also change the structure
+
+
+
+
 
 
 
@@ -86,7 +93,7 @@
   (filter #(not= x %) v))
 
 
-(defpathedfn remove-x [x]
+(defpathedfn remove-x-path [x]
   (filterer #(not= x %)))
 
 
@@ -95,7 +102,7 @@
            (remove-x a)
            ALL
            (if-path vector?
-                    (remove-x a)
+                    (remove-x-path a)
                     STAY)] v))
 
 (deftest test1

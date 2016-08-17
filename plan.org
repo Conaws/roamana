@@ -228,4 +228,149 @@ love that i've been able to get my workflow working with spacemacs
              map? #(:tempid %)
              coll? ALL NodeWalker))
 
+* August 17, 2016 
 
+** specter 
+
+(defnav ALL-ELEM-SEQ []
+  (select* [this structure next-fn]
+           (mapcat (fn [e] (next-fn [e])) structure)
+           )
+  (transform* [this structure next-fn]
+              (mapcat (fn [e] (next-fn [e])) structure)    
+              ))
+
+
+
+(transform [ALL-ELEM-SEQ (sp/selected? sp/FIRST even?)]
+           (fn [[e]] (repeat e e))
+           [1 2 3 4 5])
+
+(mapcat reverse [[1 2][][1 2]] )
+
+You can do this with the new zipper navigators in 0.10.0, but it will be more efficient and easier with a new navigator. You need something like ALL, but instead of navigating to each individual element it should navigate to every one element subsequence. Then the results of the subvalue transformations should be concatenated together.
+The navigator roughly looks like this:
+(defpath ALL-ELEM-SEQ []
+  (select* [this structure next-fn]
+    (mapcat (fn [e] (next-fn [e])) structure)
+    )
+  (transform* [this structure next-fn]
+    (mapcat (fn [e] (next-fn [e])) structure)    
+    ))
+
+(transform [ALL-ELEM-SEQ (selected? FIRST even?)]
+  (fn [[e]] (repeat e e))
+  [1 2 3 4 5])
+;; (1 2 2 3 4 4 4 4 5)
+More work is necessary to get the transform case to maintain the type of the input sequence.
+
+
+
+
+ok, so, I want to figure out step by step what is going on here
+
+
+transform 
+
+ALL-ELEM-SEQ 
+	instead of navigating to each individual element, it navigates to every one element subsequence
+	then the result of the subsequences get concatenated together
+	
+	problem with this -- doesn't maintain the structure you pass in....
+		which is what he says
+		
+
+(selected? FIRST even?)
+	since you're not navigating to a sequence of elements
+		but rather a sequence of the subsequences of elements, you have to grab FIRST to get the element
+		
+		since you're using mapcat, you can know you're wrapping the value in a vector, applying the future 
+		navigation to that vector, and then, at the ned, applying mapcat on the result.
+		
+		this is why in you fn you're goint to need to pull the value out with destructuring
+		
+
+(fn [[e ]] (repeat e e))
+
+	here, you're repeating a value the number of times that it is called
+	so, you're returning a seq of values that are going to get reconnected
+	
+	
+lets try to do the transform he outlined without looking
+
+goal
+remove the  8s  [1 2 3 [4 [5 6 8] 7 8]]
+
+(transform ALL-VECTORS ALL-ELEM-SEQ)
+
+
+this first turns what you have into a sequence of the vectors
+
+'([1 2 3 [4 [5 6 8] 7 8]]
+	[4 [5 6 8] 7 8]
+	[5 6 8])
+	
+hopefully it will put them all back in place
+
+then it navigates to every member of each of them
+[1 2 3 [...]]
+ 1 then 2 then 3 then vector [4 ....]
+[4 [...] 7 8]
+  4 then vector then 7 then 8
+[5 6 8]
+   5 then 6 then 8
+   
+   
+then you can do a selected 
+(selected? #(= 8 %))
+	so then the only things you have are 
+	8 
+	8
+
+then you set those to nil
+
+when mapcat gets the nil value
+	what does it do?
+
+;; A very useful feature of mapcat is that it allows function f to produce no result
+;; by returning nil or an empty collection:
+(mapcat #(remove even? %) [[1 2] [2 2] [2 3]])
+;; => (1 3)
+
+;; note that applying (remove even?) to [2 2] produced () which was "eaten"
+;; and ignored by mapcat.
+
+	(mapcat reverse [[1 2][][1 2]] )
+		=>  (2 1 2 1)
+		
+		
+answer
+you'd use setval rather than transform
+and rather than filterer or selected, you'd use
+#(= 5 (first %))
+
+
+
+
+(mapcat reverse [[1 2][][1 2]] )
+
+
+
+
+** ALL VECTORS
+(defn remove-y [x]
+  (fn [v]
+     (filterv #(not= x %) v)))
+
+(declarepath AllVectors)
+(providepath AllVectors
+             (if-path vector?
+                      (stay-then-continue
+                       ALL
+                       AllVectors)))
+
+
+
+(transform AllVectors (remove-y 5) [1 2 3 [4 [5 6] 5] 5])
+
+** 
