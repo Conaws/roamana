@@ -45,6 +45,38 @@
          (z/right)
          (z/node)))
 
+(def data [1 2 [3 4 [5 6]]])
+
+
+(->> data
+     (z/vector-zip)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/node))
+
+
+
+
+;; cool, z/next will return the top thing, then progressively go through it
+
+
+(defn zipm [f x]
+  (loop [z x]
+    (if (identical? (z/next z) z)
+      (z/root z)
+      (if (z/branch? z)
+        (recur (z/next z))
+        (recur (-> z (z/edit f) z/next))))))
+
+(zipm inc (z/vector-zip [1 1 [1 [1 1 1 1]]1 1]))
+
 
 (declare render-frame** buttons t4 clean-top)
 
