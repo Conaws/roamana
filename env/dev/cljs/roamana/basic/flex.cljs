@@ -41,34 +41,26 @@
 
 (defn remove-y [x]
   (fn [v]
-     (filterv #(not= x %) v)))
+    (cond->> v
+        :true (filter #(not= x %))
+        (vector? v) vec)))
 
 (declarepath AllVectors)
 (providepath AllVectors
-             (if-path vector?
+             (if-path coll?
                       (stay-then-continue
                        ALL
                        AllVectors)))
 
 
-(transform AllVectors (remove-y 5) [1 2 3 [4 [5 6] 5] 5])
-
-(defnav ALL-ELEM-SEQ []
-  (select* [this structure next-fn]
-           (mapcat (fn [e] (next-fn [e])) structure)
-           )
-  (transform* [this structure next-fn]
-              (mapcat (fn [e] (next-fn [e])) structure)    
-              ))
+(transform AllVectors (remove-y 5) [1 2 (list 3 5) [4 [5 6] 5] 5])
 
 
 
-(setval [AllVectors ALL-ELEM-SEQ #(= 5 (first %))]
-        nil
-        [5 [5 5] 7 8])
 
-;;  ALL-ELEM-SEQ won't work because it changes the structure
-;;  the current version won't work because it will also change the structure
+
+
+
 
 
 
