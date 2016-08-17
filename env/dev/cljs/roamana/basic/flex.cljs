@@ -36,31 +36,6 @@
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
-(def lorem (apply str (repeat 200 "lorem hey impsum ")))
-
-
-(defn remove-y [x]
-  (fn [v]
-    (cond->> v
-        :true (filter #(not= x %))
-        (vector? v) vec)))
-
-(declarepath AllVectors)
-(providepath AllVectors
-             (if-path coll?
-                      (stay-then-continue
-                       ALL
-                       AllVectors)))
-
-
-(transform AllVectors (remove-y 5) [1 2 (list 3 5) [4 [5 6] 5] 5])
-
-
-
-
-
-
-
 
 
 
@@ -78,30 +53,41 @@
                  x))
              v))
 
-(clean-top [1 [3] [2 3]])
 
 
-(defn t1 [v x]
-  (filter #(not= x %) v))
+
+
+
+(defn remove-y [x]
+  (fn [v]
+    (cond->> v
+      :true (filter #(not= x %))
+      (vector? v) vec)))
+
+
+(declarepath AllVectors)
+(providepath AllVectors
+             (if-path coll?
+                      (stay-then-continue
+                       ALL
+                       AllVectors)))
+
+(defn t4 [a v]
+  (transform AllVectors (remove-y a) v))
 
 
 (defpathedfn remove-x-path [x]
   (filterer #(not= x %)))
 
-
 (defn t3 [v a]
   (select [
-           (remove-x a)
+           (remove-x-path a)
            ALL
            (if-path vector?
                     (remove-x-path a)
                     STAY)] v))
 
-(deftest test1
-  (testing "removal"
-    (is
-     (= [1 2 3 [4]]
-        (t3 [1 2 3 [4 5]] 5)))))
+
 
 
 (defn t2 [v a]
@@ -113,9 +99,17 @@
                         STAY)] v))
 
 
-(t2 [1 2 3 [4 5]] 5)
-
-
+(deftest test2
+  (testing "removal"
+    (is
+     (= [1 2 '(3) [4 [6]]]
+        (t4 5 [1 2 (list 3 5) [4 [5 6] 5] 5])))
+    (is
+     (= [1 2 3 [4]]
+        (t2 [1 2 3 [4 5]] 5)))
+    (is
+     (= [1 2 3 [4]]
+        (t3 [1 2 3 [4 5]] 5)))))
 
 
 (declare render-frame*
@@ -191,9 +185,6 @@
 
 
 
-
-
-
 (declare render-frame
          split-h split-v)
 
@@ -259,6 +250,9 @@
 
 
 
+
+(def lorem (apply str (repeat 200 "lorem hey impsum ")))
+
 (defcard-rg movement
   [:div.mainframe
    [render-frame
@@ -299,7 +293,6 @@
   )
 
 
-(pprint lorem)
 
 (declare  per-of render-frame)
 
