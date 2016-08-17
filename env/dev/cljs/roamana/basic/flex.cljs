@@ -38,7 +38,50 @@
 
 
 
-(declare mainframe frame1 t4 clean-top)
+(declare render-frame** buttons t4 clean-top)
+
+(def frame (atom {:active-frame 1
+                  :frames [1 2 3]}))
+
+(defn render-h** [v]
+  (fn [v]
+    [:div.full
+     {:style {:display "flex"
+              }}
+     (for [e v]
+       ^{:key (str e v)}
+       [:div.bblack
+        {:style {:background-color "blue"
+                 :overflow "scroll"
+                 :flex 1 1 "20%"}}
+        [render-frame** e]])]))
+
+(defn render-v** [v]
+  (fn [v]
+    [:div.full.white
+     {:style {:display "flex"
+              :flex-direction "column"
+              }}
+     (for [e v]
+       ^{:key (str e v)}
+       [:div.bblack
+        {:style {:overflow "scroll"
+                 :flex 1 1 "5px"}}
+        [render-frame** e]])]))
+
+(defn render-frame** [e]
+  (fn [e]
+    (cond
+      (list? e)
+      [render-h** e]
+      (vector? e)
+      [render-v** e]
+      :else
+      [:div.full
+       (if (= e (:active-frame @frame))
+         [:h1 "here"])
+       e
+       ])))
 
 
 (defn delete-button [framestate]
@@ -55,11 +98,27 @@
    "DELETE"]
   )
 
-(defcard-rg newtet
-  [:div
-  [delete-button frame1] 
-   [mainframe frame1]]
-  frame1
+
+(defn mainframe** [frame]
+  (fn [frame]
+    [:div
+     (pr-str @frame)
+     [delete-button frame]
+     [buttons frame]
+     [:div.mainframe
+      {:style {:display "flex"}}
+      (for [e (:frames @frame)]
+        ^{:key (str e)}
+        [:div.bblack
+         {:style {:background-color "blue"
+                  :overflow "scroll"
+                  :flex 1 1 "20%"}}
+         [render-frame** e]])]]))
+
+
+(defcard-rg newtt
+ [mainframe** frame] 
+  frame
   {:inspect-data true
    :history true}
   )
