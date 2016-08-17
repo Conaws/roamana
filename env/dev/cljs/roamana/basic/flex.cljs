@@ -36,36 +36,8 @@
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
-(pprint (->
-         (z/vector-zip [1 2 [3 4] 5])
-         (z/down)
-         (z/right)
-         (z/right)
-         (z/down)
-         (z/right)
-         (z/node)))
 
 (def data [1 2 [3 4 [5 6]]])
-
-
-(->> data
-     (z/vector-zip)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/node))
-
-
-
-
-;; cool, z/next will return the top thing, then progressively go through it
-
 
 (defn zipm [f x]
   (loop [z x]
@@ -76,6 +48,66 @@
         (recur (-> z (z/edit f) z/next))))))
 
 (zipm inc (z/vector-zip [1 1 [1 [1 1 1 1]]1 1]))
+
+
+(defn vec-zip [data]
+  (z/zipper vector?
+            seq
+            (fn [old new]
+              (vec new))
+            data))
+
+
+(zipm inc (vec-zip data))
+
+(def ast-data
+  {:op :if
+   :children [:test :then :else]
+   :test {:op :eq
+          :children [:a :b]
+          :a {:op :const
+              :val 42}
+          :b {:op :const
+              :val 42}}
+   :then {:op :const
+          :val "true"}
+   :else {:op :const
+          :val "false"}})
+
+(zipmap (:children ast-data) [1 2 3 4])
+
+(defn ast-zip [data]
+  (z/zipper :children
+            (fn [node]
+              (map node (:children node)))
+            (fn [old new]
+              (merge old
+                     (zipmap (:children old)
+                             new)))
+            data)
+  )
+
+;;; given an old node, get take the new children, do something to reconstruct the node
+
+(->> (ast-zip ast-data)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/next)
+     (z/node))
+
+(zipm (fn [n]
+        (println n)
+        n)
+      (ast-zip ast-data))
+
+
+
+
+
+
 
 
 (declare render-frame** buttons t4 clean-top)
