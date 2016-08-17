@@ -7,7 +7,7 @@
             [datascript.core :as d]
             [com.rpl.specter  :refer [ALL STAY MAP-VALS LAST
                                       walker stay-then-continue 
-                                      filterer
+                                      filterer transform* select*
                                       if-path END cond-path
                                      ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
@@ -39,7 +39,7 @@
 (def lorem (apply str (repeat 200 "lorem hey impsum ")))
 
 
-(defn remove-x [x]
+(defn remove-y [x]
   (fn [v]
      (filterv #(not= x %) v)))
 
@@ -50,7 +50,22 @@
                        ALL
                        AllVectors)))
 
-(transform AllVectors (remove-x 5) [1 2 3 [4 [5 6] 5] 5])
+(transform AllVectors (remove-y 5) [1 2 3 [4 [5 6] 5] 5])
+
+(defnav ALL-ELEM-SEQ []
+  (select* [this structure next-fn]
+           (mapcat (fn [e] (next-fn [e])) structure)
+           )
+  (transform* [this structure next-fn]
+              (mapcat (fn [e] (next-fn [e])) structure)    
+              ))
+
+
+(transform [ALL-ELEM-SEQ (sp/selected? sp/FIRST even?)]
+           (fn [[e]] (repeat e e))
+           [1 2 3 4 5])
+
+(mapcat reverse [[1 2][][1 2]] )
 
 
 
