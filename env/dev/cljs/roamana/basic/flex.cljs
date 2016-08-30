@@ -56,30 +56,53 @@
                    :margin "1%"
                    :overflow "scroll"
                    :flex 1 1 "20%"}}
-          (pr-str e k)
           [render-h*** e n]])
        (pr-str v n))
 
      ]))
 
+
+(defn i [f]
+  (fn [x]
+    (if (f x)
+      (f x)
+      x)))
+
+
+(defn nextt [z]
+  (if (z/end? (z/next z))
+    z
+    (z/next z)))
+
 (defn z-buttons [zatom]
   (fn [zatom]
     [:div
-     [:button {:on-click #(swap! zatom z/next)}
+     [:button {:on-click #(swap! zatom nextt)}
       "next"]
-     [:button {:on-click #(swap! zatom z/prev)}
+     [:button {:on-click #(swap! zatom (i z/prev))}
       "prev"]
-     [:button {:on-click #(swap! zatom z/up)}
+     [:button {:on-click #(swap! zatom (i z/up))}
       "up"]
-     [:button {:on-click #(swap! zatom z/down)}
+     [:button {:on-click #(swap! zatom (i z/down))}
       "down"]
-     [:button {:on-click #(swap! zatom z/remove)}
+     [:button {:on-click #(swap! zatom (i z/right))}
+      "right"]
+     [:button {:on-click #(swap! zatom (i z/left))}
+      "left"]
+     [:button {:on-click #(swap! zatom (i z/remove))}
       "remove"]
+     [:button {:on-click #(swap! zatom
+                                 (fn [z]
+                                   (let [n (z/node z)]
+                                     (z/replace z [n]))
+                                   ))}
+
+      "replace"]
      [:button {:on-click (fn [e]
                            (swap! zatom
                                   (fn [z]
-                                    (z/insert-child z 1))))}
-      "insert-child 1"]
+                                    (z/insert-child z (count (flatten (z/root z)))))))}
+      "insert-child z"]
      [:button {:on-click (fn [e]
                            (swap! zatom
                                   (fn [z]
@@ -96,7 +119,7 @@
   (fn [zatom]
     [:div
      [:h1 (pr-str (z/node @zatom))]
-    [:b (pr-str @zatom)]
+     [z-buttons zatom]
      [render-h*** (z/root @zatom) (z/node @zatom)]]
     ))
 
