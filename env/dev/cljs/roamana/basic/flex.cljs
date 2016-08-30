@@ -37,7 +37,49 @@
 
 
 
-(def data [1 2 [3 4 [5 6]]])
+(defonce data (atom (z/vector-zip [1 2 [3 4 [5 6]]])))
+
+
+(defn zrender [zatom]
+  (fn [zatom]
+    [:div
+     [:h1 (pr-str (z/root @zatom))]
+     [:b (pr-str @zatom)]
+     [:h1 (pr-str (z/node @zatom))]
+     [:button {:on-click #(swap! zatom z/next)}
+      "next"]
+     [:button {:on-click #(swap! zatom z/prev)}
+      "prev"]
+     [:button {:on-click #(swap! zatom z/up)}
+      "up"]
+     [:button {:on-click #(swap! zatom z/down)}
+      "down"]
+     [:button {:on-click #(swap! zatom z/remove)}
+      "remove"]
+     [:button {:on-click (fn [e]
+                           (swap! zatom
+                                  (fn [z]
+                                    (z/insert-child z 1))))}
+      "insert-child 1"]
+     [:button {:on-click (fn [e]
+                           (swap! zatom
+                                  (fn [z]
+                                    (z/append-child z 1))))}
+      "append-child 1"]
+      ]
+    
+    ))
+
+
+
+(defcard-rg test
+  [zrender data]
+  data
+  {:inspect-data true
+   :history true})
+
+
+
 
 (defn zipm [f x]
   (loop [z x]
