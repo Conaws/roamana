@@ -41,7 +41,7 @@
 
 (defn render-h*** [v n]
   (fn [v n]
-    [:div.full
+    [:div.full.bblack
      {:style {:display "flex"
               :background-color
               (if (= v n)
@@ -49,13 +49,14 @@
                 "grey")
               }}
      (if (vector? v)
-       (for [e v]
-         ^{:key (str e v)}
+       (for [[k e] (map-indexed vector v)]
+         ^{:key (str e k v)}
          [:div.bblack
           {:style {:background-color "blue"
                    :margin "1%"
                    :overflow "scroll"
                    :flex 1 1 "20%"}}
+          (pr-str e k)
           [render-h*** e n]])
        (pr-str v n))
 
@@ -67,7 +68,6 @@
 (defn zrender [zatom]
   (fn [zatom]
     [:div
-     
      [:h1 (pr-str (z/node @zatom))]
      [:button {:on-click #(swap! zatom z/next)}
       "next"]
@@ -91,7 +91,6 @@
       "append-child 1"]
      [:b (pr-str @zatom)]
      [render-h*** (z/root @zatom) (z/node @zatom)]]
-    
     ))
 
 
