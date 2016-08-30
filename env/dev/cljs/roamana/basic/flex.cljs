@@ -74,9 +74,30 @@
     z
     (z/next z)))
 
+(def action-map
+  {:next nextt
+   :prev (i z/prev)
+   :up (i z/up)
+  :down (i z/down)
+  :right (i z/right)
+  :left (i z/left)
+  :remove (i z/remove)
+  :splice (fn [z]
+    (let [n (z/node z)]
+      (z/replace z [n])))
+  :insert-c (fn [z]
+    (z/insert-child z (count (flatten (z/root z)))))})
+
+
 (defn z-buttons [zatom]
   (fn [zatom]
-    [:div
+    [:div.flex {:style {:display "flex"
+                        :width "200px"
+                        :height "200px"
+                        :justify-content "center"
+                 ;       :align-items "center"
+                        :flex-flow "row wrap"
+                        }}
      [:button {:on-click #(swap! zatom nextt)}
       "next"]
      [:button {:on-click #(swap! zatom (i z/prev))}
