@@ -39,12 +39,35 @@
 
 (defonce data (atom (z/vector-zip [1 2 [3 4 [5 6]]])))
 
+(defn render-h*** [v n]
+  (fn [v n]
+    [:div.full
+     {:style {:display "flex"
+              :background-color
+              (if (= v n)
+                "white"
+                "grey")
+              }}
+     (if (vector? v)
+       (for [e v]
+         ^{:key (str e v)}
+         [:div.bblack
+          {:style {:background-color "blue"
+                   :margin "1%"
+                   :overflow "scroll"
+                   :flex 1 1 "20%"}}
+          [render-h*** e n]])
+       (pr-str v n))
+
+     ]))
+
+(defcard-rg h***card
+  [render-h*** [1 2 3 [1 2] 4]])
 
 (defn zrender [zatom]
   (fn [zatom]
     [:div
-     [:h1 (pr-str (z/root @zatom))]
-     [:b (pr-str @zatom)]
+     
      [:h1 (pr-str (z/node @zatom))]
      [:button {:on-click #(swap! zatom z/next)}
       "next"]
@@ -66,7 +89,8 @@
                                   (fn [z]
                                     (z/append-child z 1))))}
       "append-child 1"]
-      ]
+     [:b (pr-str @zatom)]
+     [render-h*** (z/root @zatom) (z/node @zatom)]]
     
     ))
 
