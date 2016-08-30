@@ -12,7 +12,7 @@
                                      ATOM must pred keypath
                                       collect-one comp-paths] :as sp]
             [cljs.spec  :as s]
-            
+            [clojure.zip :as z]
             [cljsjs.firebase]
             [roamana.util :refer [c]
              :refer-macros [s!]]
@@ -34,6 +34,230 @@
    [devcards.core
     :as dc
     :refer [defcard defcard-doc defcard-rg deftest]]))
+
+
+(deftest vectors
+  (testing "vectors"
+    (is (coll? '(1 2 3)))
+    (is (coll? [1 2 3])))
+  )
+
+
+(defn emacs-zip [data]
+  (z/zipper
+   coll?
+   seq
+   (fn [old new]
+     (if (vector? old)
+       (vec new)
+       new))
+   data
+   ))
+
+(defonce data (atom (emacs-zip [0 1 2 [3 '(4 5) [6 7]]])))
+
+(defn render-h*** [v n]
+  (fn [v n]
+    [:div.full.bblack
+     {:style {:display "flex"
+              :background-color
+              (if (= v n)
+                "white"
+                "grey")
+              }}
+     (if (vector? v)
+       (for [[k e] (map-indexed vector v)]
+         ^{:key (str e k v)}
+         [:div.full
+          {:style {:background-color "blue"
+                   :overflow "scroll"
+                   :flex 1 1 "20%"}}
+          [render-h*** e n]])
+       (if (coll? v)
+         [:div.full
+          {:style {:display "flex"
+                   :flex-direction "column"
+                   }}          
+          (for [[k e] (map-indexed vector v)]
+            ^{:key (str k e v)}
+            [render-h*** e n]
+            )]
+         (pr-str v n)))
+
+     ]))
+
+
+(defn i [f]
+  (fn [x]
+    (if (f x)
+      (f x)
+      x)))
+
+
+(defn nextt [z]
+  (if (z/end? (z/next z))
+    z
+    (z/next z)))
+
+(def action-map
+  {:next nextt
+   :prev (i z/prev)
+   :up (i z/up)
+  :down (i z/down)
+  :right (i z/right)
+  :left (i z/left)
+  :remove (i z/remove)
+  :splice (fn [z]
+    (let [n (z/node z)]
+      (z/replace z [n])))
+  :insert-c (fn [z]
+    (z/insert-child z (count (flatten (z/root z)))))})
+
+
+(defn z-buttons [zatom]
+  (fn [zatom]
+    [:div.flex {:style {:display "flex"
+                        :width "200px"
+                        :height "200px"
+                        :justify-content "center"
+                 ;       :align-items "center"
+                        :flex-flow "row wrap"
+                        }}
+     [:button {:on-click #(swap! zatom nextt)}
+      "next"]
+     [:button {:on-click #(swap! zatom (i z/prev))}
+      "prev"]
+     [:button {:on-click #(swap! zatom (i z/up))}
+      "up"]
+     [:button {:on-click #(swap! zatom (i z/down))}
+      "down"]
+     [:button {:on-click #(swap! zatom (i z/right))}
+      "right"]
+     [:button {:on-click #(swap! zatom (i z/left))}
+      "left"]
+     [:button {:on-click #(swap! zatom (i z/remove))}
+      "remove"]
+     [:button {:on-click #(swap! zatom
+                                 (fn [z]
+                                   (let [n (z/node z)]
+                                     (z/replace z [n]))
+                                   ))}
+
+      "replace"]
+     [:button {:on-click (fn [e]
+                           (swap! zatom
+                                  (fn [z]
+                                    (z/insert-child z (count (flatten (z/root z)))))))}
+      "insert-child z"]
+     [:button {:on-click (fn [e]
+                           (swap! zatom
+                                  (fn [z]
+                                    (z/append-child z 1))))}
+      "append-child 1"]]
+    
+    ))
+
+
+(defcard-rg h***card
+  [render-h*** [1 2 3 [1 2] 4]])
+
+(defn zrender [zatom]
+  (fn [zatom]
+    [:div.full
+     [:h1 (pr-str (z/node @zatom))]
+     [z-buttons zatom]
+     [render-h*** (z/root @zatom) (z/node @zatom)]]
+    ))
+
+
+
+(defcard-rg test
+  [:div {:style {:height "500px"}}
+
+   [zrender data]]
+  data
+  {:inspect-data true
+   :history true})
+
+
+
+
+(defn zipm [f x]
+  (loop [z x]
+    (if (identical? (z/next z) z)
+      (z/root z)
+      (if (z/branch? z)
+        (recur (z/next z))
+        (recur (-> z (z/edit f) z/next))))))
+
+
+
+(defn vec-zip [data]
+  (z/zipper vector?
+            seq
+            (fn [old new]
+              (vec new))
+            data))
+
+
+
+(def ast-data
+  {:op :if
+   :children [:test :then :else]
+   :test {:op :eq
+          :children [:a :b]
+          :a {:op :const
+              :val 42}
+          :b {:op :const
+              :val 42}}
+   :then {:op :const
+          :val "true"}
+   :else {:op :const
+          :val "false"}})
+
+
+(defn ast-zip [data]
+  (z/zipper :children
+            (fn [node]
+              (map node (:children node)))
+            (fn [old new]
+              (merge old
+                     (zipmap (:children old)
+                             new)))
+            data)
+  )
+
+
+(defonce astatom (atom (ast-zip ast-data)))
+
+(defn ast-part [ast x]
+  [:div.bblack
+   {:style {:margin-left "15px"
+            }}
+   (if (= ast x)
+     "me")
+   [:h3 (pr-str (:op ast))]
+   (when-let [v (:val ast)]
+     [:h4 v])
+   (for [c (map ast (:children ast))]
+     [ast-part c x])])
+
+(defn ast-render [zatom]
+  (fn [zatom]
+    [:div (pr-str @zatom)
+     [z-buttons zatom]
+     [ast-part (z/root @zatom)
+      (z/node @zatom)]
+     ]))
+
+
+(defcard-rg astcard
+  [ast-render astatom]
+  astatom
+  {:inspect-data true
+   :history true})
+
+
 
 
 
