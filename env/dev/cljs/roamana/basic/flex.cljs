@@ -36,8 +36,25 @@
     :refer [defcard defcard-doc defcard-rg deftest]]))
 
 
+(deftest vectors
+  (testing "vectors"
+    (is (coll? '(1 2 3)))
+    (is (coll? [1 2 3])))
+  )
 
-(defonce data (atom (z/vector-zip [1 2 [3 4 [5 6]]])))
+
+(defn emacs-zip [data]
+  (z/zipper
+   coll?
+   seq
+   (fn [old new]
+     (if (vector? old)
+       (vec new)
+       new))
+   data
+   ))
+
+(defonce data (atom (emacs-zip [0 1 2 [3 '(4 5) [6 7]]])))
 
 (defn render-h*** [v n]
   (fn [v n]
@@ -51,13 +68,21 @@
      (if (vector? v)
        (for [[k e] (map-indexed vector v)]
          ^{:key (str e k v)}
-         [:div.bblack
+         [:div.full
           {:style {:background-color "blue"
-                   :margin "1%"
                    :overflow "scroll"
                    :flex 1 1 "20%"}}
           [render-h*** e n]])
-       (pr-str v n))
+       (if (coll? v)
+         [:div.full
+          {:style {:display "flex"
+                   :flex-direction "column"
+                   }}          
+          (for [[k e] (map-indexed vector v)]
+            ^{:key (str k e v)}
+            [render-h*** e n]
+            )]
+         (pr-str v n)))
 
      ]))
 
@@ -138,7 +163,7 @@
 
 (defn zrender [zatom]
   (fn [zatom]
-    [:div
+    [:div.full
      [:h1 (pr-str (z/node @zatom))]
      [z-buttons zatom]
      [render-h*** (z/root @zatom) (z/node @zatom)]]
@@ -147,7 +172,9 @@
 
 
 (defcard-rg test
-  [zrender data]
+  [:div {:style {:height "500px"}}
+
+   [zrender data]]
   data
   {:inspect-data true
    :history true})
