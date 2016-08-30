@@ -62,13 +62,9 @@
 
      ]))
 
-(defcard-rg h***card
-  [render-h*** [1 2 3 [1 2] 4]])
-
-(defn zrender [zatom]
+(defn z-buttons [zatom]
   (fn [zatom]
     [:div
-     [:h1 (pr-str (z/node @zatom))]
      [:button {:on-click #(swap! zatom z/next)}
       "next"]
      [:button {:on-click #(swap! zatom z/prev)}
@@ -88,8 +84,19 @@
                            (swap! zatom
                                   (fn [z]
                                     (z/append-child z 1))))}
-      "append-child 1"]
-     [:b (pr-str @zatom)]
+      "append-child 1"]]
+    
+    ))
+
+
+(defcard-rg h***card
+  [render-h*** [1 2 3 [1 2] 4]])
+
+(defn zrender [zatom]
+  (fn [zatom]
+    [:div
+     [:h1 (pr-str (z/node @zatom))]
+    [:b (pr-str @zatom)]
      [render-h*** (z/root @zatom) (z/node @zatom)]]
     ))
 
@@ -112,7 +119,6 @@
         (recur (z/next z))
         (recur (-> z (z/edit f) z/next))))))
 
-(zipm inc (z/vector-zip [1 1 [1 [1 1 1 1]]1 1]))
 
 
 (defn vec-zip [data]
@@ -123,7 +129,6 @@
             data))
 
 
-(zipm inc (vec-zip data))
 
 (def ast-data
   {:op :if
@@ -139,7 +144,6 @@
    :else {:op :const
           :val "false"}})
 
-(zipmap (:children ast-data) [1 2 3 4])
 
 (defn ast-zip [data]
   (z/zipper :children
@@ -152,23 +156,35 @@
             data)
   )
 
-;;; given an old node, get take the new children, do something to reconstruct the node
 
-(->> (ast-zip ast-data)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/next)
-     (z/node))
+(defonce astatom (atom (ast-zip ast-data)))
 
-(zipm (fn [n]
-        (println n)
-        n)
-      (ast-zip ast-data))
+(defn ast-part [ast x]
+  [:div.bblack
+   {:style {:margin-left "15px"
+            }}
+   (if (= ast x)
+     "me")
+   [:h3 (pr-str (:op ast))]
+   (when-let [v (:val ast)]
+     [:h4 v])
+   (for [c (map ast (:children ast))]
+     [ast-part c x])])
+
+(defn ast-render [zatom]
+  (fn [zatom]
+    [:div (pr-str @zatom)
+     [z-buttons zatom]
+     [ast-part (z/root @zatom)
+      (z/node @zatom)]
+     ]))
 
 
+(defcard-rg astcard
+  [ast-render astatom]
+  astatom
+  {:inspect-data true
+   :history true})
 
 
 
